@@ -18,6 +18,7 @@ final class IslandModel {
         /// A device was picked but the app is playing somewhere else right now (disconnected or still settling).
         let isFallingBack: Bool
         var volume: Float
+        var muted: Bool
         let error: String?
     }
 
@@ -112,14 +113,18 @@ final class IslandModel {
         refresh()
     }
 
-    /// Called for every slider tick: patch the one row instead of re-reading Core Audio.
-    func setVolume(_ volume: Float, for row: Row) {
-        manager.setVolume(volume, for: row.app)
-        if let index = rows.firstIndex(where: { $0.id == row.id }) {
-            rows[index].volume = volume
-        } else if let index = otherRows.firstIndex(where: { $0.id == row.id }) {
-            otherRows[index].volume = volume
+    /// Called for every slider tick (`final` on release): patch the one row instead of re-reading Core Audio.
+    func setVolume(_ volume: Float, for row: Row, final: Bool) {
+        manager.setVolume(volume, for: row.app, final: final)
+        update(row) {
+            $0.volume = volume
+            if volume > 0 { $0.muted = false }
         }
+    }
+
+    func toggleMute(for row: Row) {
+        manager.setMuted(!row.muted, for: row.app)
+        refresh()
     }
 
     func setSystemVolume(_ volume: Float) {
@@ -165,8 +170,17 @@ final class IslandModel {
             chipSymbol: chosenUID == nil ? DeviceSymbol.systemDefault : chosenDevice?.symbolName ?? DeviceSymbol.missing,
             isFallingBack: chosenUID != nil && manager.currentDestination(for: app.bundleID) != chosenUID,
             volume: preference?.volume ?? 1,
+            muted: preference?.muted ?? false,
             error: manager.errors[app.bundleID]
         )
+    }
+
+    private func update(_ row: Row, _ change: (inout Row) -> Void) {
+        if let index = rows.firstIndex(where: { $0.id == row.id }) {
+            change(&rows[index])
+        } else if let index = otherRows.firstIndex(where: { $0.id == row.id }) {
+            change(&otherRows[index])
+        }
     }
 
     private func isRoutable(_ app: AudioApp) -> Bool {

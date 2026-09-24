@@ -41,8 +41,6 @@ public final class RouteManager {
 
     public var hasActiveRoutes: Bool { !routes.isEmpty }
 
-    public func volume(for bundleID: String) -> Float { preferences[bundleID]?.volume ?? 1 }
-
     /// UID of the device the app is actually playing through right now, or nil if it isn't routed.
     public func currentDestination(for bundleID: String) -> String? { routes[bundleID]?.destinationUID }
 
@@ -54,17 +52,26 @@ public final class RouteManager {
         update(app.bundleID, preference)
     }
 
-    public func setVolume(_ volume: Float, for app: AudioApp) {
+    /// Pass `final: false` for ticks during a drag and `true` when it ends. Mid-drag the live route is kept even at
+    /// 100%, so crossing the top doesn't tear it down and rebuild it; whether it's still needed is decided at the end.
+    /// Moving the slider also unmutes the app.
+    public func setVolume(_ volume: Float, for app: AudioApp, final: Bool = true) {
         var preference = preference(for: app)
         preference.volume = max(0, min(volume, 1))
-        if let route = routes[app.bundleID], !preference.isNeutral {
-            // Live change during a drag: no rebuild, and the save is batched.
-            route.renderer.volume = preference.volume
+        if preference.volume > 0 { preference.muted = false }
+        if let route = routes[app.bundleID], !final || !preference.isNeutral {
+            route.renderer.volume = preference.gain
             preferences[app.bundleID] = preference
             scheduleSave()
         } else {
             update(app.bundleID, preference)
         }
+    }
+
+    public func setMuted(_ muted: Bool, for app: AudioApp) {
+        var preference = preference(for: app)
+        preference.muted = muted
+        update(app.bundleID, preference)
     }
 
     public func removeAll() {
@@ -114,7 +121,7 @@ public final class RouteManager {
             let stillWanted = targets[bundleID]?.uid == route.destinationUID
                 && route.source == .bundleIDs(preferences[bundleID]?.tapBundleIDs ?? [])
             if stillWanted {
-                route.renderer.volume = preferences[bundleID]?.volume ?? 1
+                route.renderer.volume = preferences[bundleID]?.gain ?? 1
             } else {
                 replaced.append((bundleID, route))
                 routes[bundleID] = nil
@@ -124,7 +131,7 @@ public final class RouteManager {
         for (bundleID, target) in targets where routes[bundleID] == nil {
             guard let preference = preferences[bundleID] else { continue }
             do {
-                routes[bundleID] = try Route(source: .bundleIDs(preference.tapBundleIDs), destination: target, volume: preference.volume)
+                routes[bundleID] = try Route(source: .bundleIDs(preference.tapBundleIDs), destination: target, volume: preference.gain)
                 errors[bundleID] = nil
                 log.notice("route started \(bundleID, privacy: .public) → \(target.uid, privacy: .public) volume=\(preference.volume) taps=\(preference.tapBundleIDs, privacy: .public)")
             } catch {

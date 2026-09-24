@@ -8,7 +8,8 @@ struct AppRow: View {
     let isPickerExpanded: Bool
     let onTogglePicker: () -> Void
     let onSelect: (OutputDevice?) -> Void
-    let onVolume: (Float) -> Void
+    let onVolume: (Float, _ final: Bool) -> Void
+    let onToggleMute: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -45,7 +46,10 @@ struct AppRow: View {
                     .padding(.top, 2)
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
-                VolumeLine(value: row.volume, tint: row.volume < RoutePreference.fullVolume ? .white : .white.opacity(0.85), onChange: onVolume)
+                VolumeLine(value: row.volume, muted: row.muted,
+                           tint: row.volume < RoutePreference.fullVolume ? .white : .white.opacity(0.85),
+                           onToggleMute: onToggleMute,
+                           onChange: { onVolume($0, false) }, onCommit: { onVolume($0, true) })
                 if let note {
                     Text(note)
                         .font(.system(size: 10.5))

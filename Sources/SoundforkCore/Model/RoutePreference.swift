@@ -7,12 +7,15 @@ public struct RoutePreference: Codable, Sendable, Hashable {
     public var tapBundleIDs: [String]
     /// 0...1, applied in the IOProc.
     public var volume: Float
+    /// Silences the app without losing its volume.
+    public var muted: Bool
 
-    public init(deviceUID: String?, deviceName: String? = nil, tapBundleIDs: [String], volume: Float = 1) {
+    public init(deviceUID: String?, deviceName: String? = nil, tapBundleIDs: [String], volume: Float = 1, muted: Bool = false) {
         self.deviceUID = deviceUID
         self.deviceName = deviceName
         self.tapBundleIDs = tapBundleIDs
         self.volume = volume
+        self.muted = muted
     }
 
     public init(from decoder: any Decoder) throws {
@@ -21,11 +24,15 @@ public struct RoutePreference: Codable, Sendable, Hashable {
         deviceName = try container.decodeIfPresent(String.self, forKey: .deviceName)
         tapBundleIDs = try container.decode([String].self, forKey: .tapBundleIDs)
         volume = try container.decodeIfPresent(Float.self, forKey: .volume) ?? 1
+        muted = try container.decodeIfPresent(Bool.self, forKey: .muted) ?? false
     }
 
     /// Volumes at or above this count as 100% (sliders rarely land on exactly 1).
     public static let fullVolume: Float = 0.995
 
-    /// Nothing to do for this app: default device, full volume. No route needed.
-    var isNeutral: Bool { deviceUID == nil && volume >= Self.fullVolume }
+    /// The gain the IOProc should apply.
+    public var gain: Float { muted ? 0 : volume }
+
+    /// Nothing to do for this app: default device, full volume, not muted. No route needed.
+    var isNeutral: Bool { deviceUID == nil && volume >= Self.fullVolume && !muted }
 }

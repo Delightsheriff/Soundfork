@@ -46,6 +46,9 @@ public final class Route {
                                         ioProc: routeIOProc, clientData: Unmanaged.passUnretained(renderer).toOpaque())
     }
 
+    /// The IOProc holds an unretained pointer to `renderer`; stop it before the renderer can be released.
+    deinit { stop() }
+
     public func diagnostics() throws -> Diagnostics? {
         guard let tapAggregate else { return nil }
         let aggregate = tapAggregate.aggregateID

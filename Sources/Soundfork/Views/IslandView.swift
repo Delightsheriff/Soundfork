@@ -138,7 +138,8 @@ struct IslandView: View {
                     isPickerExpanded: model.expandedPicker == row.id,
                     onTogglePicker: { withAnimation(Self.pickerSpring) { model.togglePicker(row.id) } },
                     onSelect: { device in withAnimation(Self.pickerSpring) { model.setDestination(device, for: row) } },
-                    onVolume: { model.setVolume($0, for: row) }
+                    onVolume: { model.setVolume($0, for: row, final: $1) },
+                    onToggleMute: { model.toggleMute(for: row) }
                 )
             }
         }

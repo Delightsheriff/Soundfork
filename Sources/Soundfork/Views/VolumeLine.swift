@@ -7,6 +7,7 @@ struct VolumeLine: View {
     var tint: Color = .white
     var onToggleMute: (() -> Void)?
     let onChange: (Float) -> Void
+    var onCommit: ((Float) -> Void)?
 
     var body: some View {
         HStack(spacing: 8) {
@@ -17,10 +18,11 @@ struct VolumeLine: View {
                     .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)
-            .foregroundStyle(.white.opacity(0.6))
+            .foregroundStyle(muted ? Color.orange : .white.opacity(0.6))
             .disabled(onToggleMute == nil)
+            .help(muted ? "Unmute" : "Mute")
 
-            PillSlider(value: muted ? 0 : value, tint: muted ? .white.opacity(0.3) : tint, onChange: onChange)
+            PillSlider(value: muted ? 0 : value, tint: muted ? .white.opacity(0.3) : tint, onChange: onChange, onCommit: onCommit)
 
             Text(muted ? "Muted" : value.formatted(.percent.precision(.fractionLength(0))))
                 .font(.system(size: 11, weight: .medium).monospacedDigit())

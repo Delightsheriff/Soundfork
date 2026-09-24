@@ -6,6 +6,8 @@ struct PillSlider: View {
     let value: Float
     var tint: Color = .white
     let onChange: (Float) -> Void
+    /// Called once with the final value when a drag ends.
+    var onCommit: ((Float) -> Void)?
 
     @State private var dragValue: Float?
     @State private var hovering = false
@@ -30,7 +32,10 @@ struct PillSlider: View {
                         dragValue = newValue
                         onChange(newValue)
                     }
-                    .onEnded { _ in dragValue = nil }
+                    .onEnded { _ in
+                        if let dragValue { onCommit?(dragValue) }
+                        dragValue = nil
+                    }
             )
         }
         .frame(height: 18)
