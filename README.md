@@ -10,8 +10,12 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/welcome.png" width="420" alt="Soundfork's welcome screen growing out of the notch">
-  <img src="docs/images/settings.png" width="420" alt="Soundfork settings inside the island">
+  <img src="docs/images/island.png" width="560" alt="The Soundfork island open under the notch, showing Chrome and Spotify with their own outputs and volumes">
+</p>
+
+<p align="center">
+  <img src="docs/images/welcome.png" width="380" alt="Soundfork's one-time welcome inside the island">
+  <img src="docs/images/settings.png" width="380" alt="Soundfork settings inside the island">
 </p>
 
 ---
