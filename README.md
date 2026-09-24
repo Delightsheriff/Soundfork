@@ -31,7 +31,7 @@ macOS sends every app to the same output. Soundfork lets you pick an output **pe
 ```
 
 - **Per-app output.** Pick any speaker, headphones, AirPods, USB interface or display for any app.
-- **Per-app volume.** Each app has its own slider, which scales within the Mac's main volume (main at 50% and app at 100% plays at 50%).
+- **Per-app volume and mute.** Each app has its own slider, and clicking its speaker icon mutes just that app. App volume scales within the volume of the device it plays on (that device at 50% and the app at 100% plays at 50%).
 - **Lives in the notch.** Rest the pointer on the notch (or press **⌃⌥⌘S**) and a dynamic-island panel grows out of it. Move away and it tucks itself back in.
 - **Remembers everything.** Routes and volumes come back after restarts, relaunches and reconnects.
 - **Handles speakers coming and going.** If a speaker disconnects, its apps fall back to the default output at the same volume, then move back when it reconnects.
@@ -47,7 +47,7 @@ macOS sends every app to the same output. Soundfork lets you pick an output **pe
 
 ### Download
 
-1. Download `Soundfork.zip` from the [latest release](../../releases/latest) and unzip it.
+1. Download `Soundfork.zip` from the [Releases page](../../releases) (available from the first release on) and unzip it. It runs on Apple Silicon and Intel Macs.
 2. Drag **Soundfork.app** into **Applications** and open it.
 3. The first time, macOS says it can't verify the developer, because Soundfork isn't notarized by Apple. To open it anyway:
    - Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**, **or**
@@ -58,11 +58,11 @@ macOS sends every app to the same output. Soundfork lets you pick an output **pe
 
 ### Build from source
 
-Needs Xcode 27 (Swift 6.4).
+Needs Xcode 26 or later (Swift 6.2+, macOS 26 SDK).
 
 ```bash
-git clone <this repo>
-cd soundfork
+git clone https://github.com/Delightsheriff/Soundfork.git
+cd Soundfork
 ./scripts/install.sh      # builds, installs to /Applications and launches
 ```
 
@@ -75,6 +75,7 @@ The build is signed with an Apple Development identity from your keychain if you
 | Open the island | Rest the pointer on the notch, press **⌃⌥⌘S**, or click the fork icon in the menu bar |
 | Move an app | Tap the device chip on its row and pick an output |
 | Change an app's volume | Drag its slider |
+| Mute one app | Click the speaker icon on its row (click again, or drag the slider, to unmute) |
 | Put an app back to normal | Pick **System default** at 100% |
 | Change the Mac's output or volume | Use the **Output** section at the top |
 | Settings, quit | Gear icon in the island's footer, or right-click the menu-bar icon |
@@ -101,6 +102,7 @@ More detail is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - **Safari and other WebKit apps share one audio process**, so routing Safari also moves Mail's and other WebKit apps' sounds.
 - **Per-tab routing** in browsers isn't possible; a browser moves as a whole.
 - Apps that take **exclusive ("hog mode") control** of a device can't be redirected.
+- Routing to a **headset with a microphone** (AirPods) asks Core Audio to leave the mic off so the headset stays in high-quality mode; this hasn't been verified on every headset yet.
 
 ## Privacy
 
@@ -113,6 +115,7 @@ swift build                          # compile everything
 swift test                           # unit tests
 ./scripts/build-app.sh               # build/Soundfork.app
 ./scripts/install.sh                 # install to /Applications and relaunch
+./scripts/release.sh                 # universal build → build/Soundfork.zip for a GitHub release
 swift scripts/make-icon.swift        # re-render the app icon
 ./scripts/spike.sh --list            # list devices and audio processes
 ```

@@ -17,6 +17,7 @@ borderless panel at the top-center with custom animation.
 
 ## D4: Deployment target macOS 26, unsandboxed
 Personal tool on macOS 27. Newer APIs are fine; the sandbox adds friction and buys nothing here.
+*Superseded in part by D9: Soundfork is now published, but the deployment target and sandbox choice stand.*
 
 ## D5: Phase 1 spike results (2026-09-24, macOS 27.0, M-series MacBook Pro)
 Measured with `TapSpike` (logs in `build/spike.log`):
@@ -40,7 +41,8 @@ Still open: the 30-minute listening test on the real scenario (Spotify → Bluet
 "Earshot" was the first choice, but at least six macOS apps on GitHub use it, including a menu-bar EQ
 and an AirPods/Bluetooth app that routes audio. "Soundfork" only matched a 2013 song-sharing site and a
 Flutter plugin, with no Mac app and no audio-routing tool. It's also the icon: a tuning fork splitting one sound two ways.
-Bundle ID `com.delightsheriff.Soundfork`; saved routes migrate from the old `dev.local.AudioRouter` domain.
+Bundle ID `com.delightsheriff.Soundfork`. There's no migration from the pre-rename `dev.local.AudioRouter` settings
+(an early version had one; it was removed before release since that build never shipped).
 
 ## D7: Global shortcut is ⌃⌥⌘S
 Apple's published shortcuts use ⌃⌥⌘ only for 8 (invert colors) and , / . (contrast), and nothing standard uses
@@ -50,3 +52,21 @@ a clash if another app already owns the combination; Settings shows that and let
 ## D8: Background-first app
 No Dock icon or windows (`LSUIElement`). The welcome shows once; launches at login are silent. The menu-bar icon
 can be hidden, but hover, the shortcut, or the icon always stays available, and launching the app again opens the island.
+
+## D9: Published app: hardened runtime, macOS 26 for now
+Soundfork is distributed publicly (GitHub, MIT), so D4's "personal tool" framing no longer holds. What changed:
+- **Hardened runtime on every build.** The app holds the audio-capture permission and isn't sandboxed; without the
+  hardened runtime another local process could inject code into it and use that permission. Taps, the Carbon shortcut
+  and the login item need no exception entitlements.
+- **Still unsandboxed and not notarized.** Notarization needs a paid Developer ID; until then the README documents
+  the one-time "Open Anyway" step.
+- **Minimum macOS stays 26.** Process taps exist since macOS 14.2, but tapping by bundle ID with process restore
+  (what `RouteManager` relies on) is macOS 26+. Supporting 14.4+ means re-creating process-object taps when apps
+  relaunch; that's the top roadmap item.
+- **Universal binary** for Apple Silicon and Intel (`scripts/release.sh`).
+
+## D10: Route decisions are a pure plan
+`RoutePlan` (where each app plays; which routes to keep, start, stop) and `DeviceSettling` (which devices have been
+connected long enough) are pure and unit-tested. `RouteManager.reconcile()` only carries the plan out, always starting
+replacements before stopping old routes. Tap creation waits for an off-main permission check, because it blocks until
+the user answers the audio-capture prompt.
