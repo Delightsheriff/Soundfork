@@ -1,5 +1,5 @@
 import Testing
-@testable import AudioRouterCore
+@testable import SoundforkCore
 
 @Test func helpersBelongToTheirApp() {
     #expect(AudioApps.owner(ofProcess: "com.google.Chrome.helper") == "com.google.Chrome")
@@ -14,9 +14,9 @@ import Testing
         AudioProcess(objectID: 1, pid: 1, bundleID: "com.google.Chrome.helper", isRunningOutput: false),
         AudioProcess(objectID: 2, pid: 2, bundleID: "com.google.Chrome.helper", isRunningOutput: true),
         AudioProcess(objectID: 3, pid: 3, bundleID: "com.spotify.client", isRunningOutput: false),
-        AudioProcess(objectID: 4, pid: 4, bundleID: "dev.local.AudioRouter", isRunningOutput: true),
+        AudioProcess(objectID: 4, pid: 4, bundleID: "com.delightsheriff.Soundfork", isRunningOutput: true),
     ]
-    let apps = AudioApps.group(processes, excludingPrefix: "dev.local.AudioRouter")
+    let apps = AudioApps.group(processes, excludingPrefix: "com.delightsheriff.Soundfork")
     #expect(apps == [
         AudioApp(bundleID: "com.google.Chrome", tapBundleIDs: ["com.google.Chrome", "com.google.Chrome.helper"], isPlaying: true),
         AudioApp(bundleID: "com.spotify.client", tapBundleIDs: ["com.spotify.client"], isPlaying: false),

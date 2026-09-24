@@ -9,7 +9,7 @@
 //   --seconds <n>          stop after n seconds (default: run until SIGINT/SIGTERM)
 //   --volume <0...1>       route volume (default 1)
 
-import AudioRouterCore
+import SoundforkCore
 import CoreAudio
 import Foundation
 

@@ -1,15 +1,15 @@
 #!/bin/zsh
 # Builds signed .app bundles into build/.
-#   ./scripts/build-app.sh            → build/AudioRouter.app
+#   ./scripts/build-app.sh            → build/Soundfork.app
 #   ./scripts/build-app.sh TapSpike   → build/TapSpike.app
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-PRODUCT="${1:-AudioRouterApp}"
+PRODUCT="${1:-Soundfork}"
 case "$PRODUCT" in
-  AudioRouterApp) NAME="AudioRouter"; BUNDLE_ID="dev.local.AudioRouter" ;;
-  TapSpike)       NAME="TapSpike";    BUNDLE_ID="dev.local.AudioRouter.TapSpike" ;;
+  Soundfork) NAME="Soundfork"; BUNDLE_ID="com.delightsheriff.Soundfork" ;;
+  TapSpike)  NAME="TapSpike";  BUNDLE_ID="com.delightsheriff.Soundfork.TapSpike" ;;
   *) echo "unknown product: $PRODUCT" >&2; exit 1 ;;
 esac
 

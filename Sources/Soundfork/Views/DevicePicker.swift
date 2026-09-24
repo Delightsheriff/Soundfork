@@ -1,4 +1,4 @@
-import AudioRouterCore
+import SoundforkCore
 import SwiftUI
 
 /// Inline device list that unfolds under a row, styled like the rest of the island.

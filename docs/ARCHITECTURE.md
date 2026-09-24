@@ -18,17 +18,17 @@
 | Network | None | Fully offline |
 
 Info.plist keys: `LSUIElement = YES` (no Dock icon), `NSAudioCaptureUsageDescription` (required for taps),
-`CFBundleIdentifier = dev.local.AudioRouter`.
+`CFBundleIdentifier = com.delightsheriff.Soundfork`.
 
 ## Package layout
 
 ```
-AudioRouter/
+Soundfork/
 ├── Package.swift
 ├── Resources/Info.plist
 ├── scripts/build-app.sh            # swift build -c release → assemble .app → codesign
 ├── Sources/
-│   ├── AudioRouterCore/            # library: no UI, testable
+│   ├── SoundforkCore/            # library: no UI, testable
 │   │   ├── CoreAudio/
 │   │   │   ├── CoreAudioError.swift
 │   │   │   ├── AudioObject+Properties.swift   # typed get/set helpers for AudioObjectGetPropertyData
@@ -41,13 +41,13 @@ AudioRouter/
 │   │   │   └── RoutePreference.swift          # deviceUID, volume, muted
 │   │   ├── RouteManager.swift                 # @MainActor; owns [bundleID: Route], reconciles
 │   │   └── RouteStore.swift                   # UserDefaults persistence
-│   ├── AudioRouterApp/             # executable: AppKit + SwiftUI
+│   ├── Soundfork/             # executable: AppKit + SwiftUI
 │   │   ├── main.swift / AppDelegate.swift
 │   │   ├── StatusItemController.swift
 │   │   ├── IslandPanel.swift                  # NSPanel subclass + positioning
 │   │   └── Views/ (IslandView, AppRow, DevicePicker)
 │   └── TapSpike/                   # Phase 1 only: hard-coded single route, deleted later
-└── Tests/AudioRouterCoreTests/     # pure logic only (grouping, reconciliation, persistence)
+└── Tests/SoundforkCoreTests/     # pure logic only (grouping, reconciliation, persistence)
 ```
 
 ## Audio engine: one route
@@ -62,7 +62,7 @@ start(processObjectIDs, destinationUID)
   2. AudioHardwareCreateProcessTap(tapDesc) → tapID
   3. read kAudioTapPropertyFormat (log it)
   4. AudioHardwareCreateAggregateDevice([
-        UID: "dev.local.AudioRouter.route.<uuid>",
+        UID: "com.delightsheriff.Soundfork.route.<uuid>",
         IsPrivate: true,
         MainSubDevice: destinationUID,
         SubDeviceList: [[UID: destinationUID]],

@@ -57,7 +57,7 @@ public final class Route {
             description.bundleIDs = ids
             description.isProcessRestoreEnabled = true
         }
-        description.name = "AudioRouter tap"
+        description.name = "Soundfork tap"
         description.muteBehavior = .mutedWhenTapped
         description.isPrivate = true
 
@@ -65,8 +65,8 @@ public final class Route {
         diagnostics.tapFormat = try tapID.read(kAudioTapPropertyFormat, initial: AudioStreamBasicDescription())
 
         let aggregate: [String: Any] = [
-            kAudioAggregateDeviceNameKey: "AudioRouter route",
-            kAudioAggregateDeviceUIDKey: "dev.local.AudioRouter.route.\(UUID().uuidString)",
+            kAudioAggregateDeviceNameKey: "Soundfork route",
+            kAudioAggregateDeviceUIDKey: "com.delightsheriff.Soundfork.route.\(UUID().uuidString)",
             kAudioAggregateDeviceMainSubDeviceKey: destinationUID,
             kAudioAggregateDeviceIsPrivateKey: true,
             kAudioAggregateDeviceIsStackedKey: false,

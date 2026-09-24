@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "AudioRouter",
+    name: "Soundfork",
     platforms: [.macOS(.v26)],
     targets: [
-        .target(name: "AudioRouterCore"),
-        .executableTarget(name: "AudioRouterApp", dependencies: ["AudioRouterCore"]),
-        .executableTarget(name: "TapSpike", dependencies: ["AudioRouterCore"]),
-        .testTarget(name: "AudioRouterCoreTests", dependencies: ["AudioRouterCore"]),
+        .target(name: "SoundforkCore"),
+        .executableTarget(name: "Soundfork", dependencies: ["SoundforkCore"]),
+        .executableTarget(name: "TapSpike", dependencies: ["SoundforkCore"]),
+        .testTarget(name: "SoundforkCoreTests", dependencies: ["SoundforkCore"]),
     ]
 )

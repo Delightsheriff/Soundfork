@@ -1,4 +1,4 @@
-import AudioRouterCore
+import SoundforkCore
 import SwiftUI
 
 struct AppRow: View {

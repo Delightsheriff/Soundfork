@@ -1,4 +1,4 @@
-import AudioRouterCore
+import SoundforkCore
 import SwiftUI
 
 /// The island: collapsed it's exactly the notch; open it grows into a black card under the notch.

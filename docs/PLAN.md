@@ -29,7 +29,7 @@ because they touch separate folders.
 ## Phases
 
 ### Phase 0: Scaffold (Lead)
-- `Package.swift` with the `AudioRouterCore`, `AudioRouterApp` and `TapSpike` targets
+- `Package.swift` with the `SoundforkCore`, `Soundfork` and `TapSpike` targets
 - `Resources/Info.plist` and `scripts/build-app.sh` (build → .app → codesign)
 - **Done when** `./scripts/build-app.sh` produces a signed app that launches and shows a menu-bar icon.
 
@@ -43,7 +43,7 @@ because they touch separate folders.
 - **If it fails:** stop, write up findings in `docs/DECISIONS.md`, and rethink before building anything else.
 
 ### Phase 2: Core engine (builder)
-- Extract `Route`, `OutputDevices` and `AudioProcesses` from the spike into `AudioRouterCore`.
+- Extract `Route`, `OutputDevices` and `AudioProcesses` from the spike into `SoundforkCore`.
 - Run several routes at once (Spotify → speaker, Chrome → Mac, Discord → AirPods).
 - **Done when** three routes play simultaneously and start/stop in any order without glitches or leaks.
 

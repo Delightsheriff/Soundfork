@@ -1,5 +1,5 @@
 import Testing
-@testable import AudioRouterCore
+@testable import SoundforkCore
 
 @Test func printableCodesRenderAsFourChars() {
     #expect(fourCC(0x7072_7323) == "'prs#'")

@@ -1,5 +1,5 @@
 import AppKit
-import AudioRouterCore
+import SoundforkCore
 
 /// Menu-bar icon. Left click toggles the island; right click shows a small options menu.
 @MainActor
@@ -27,7 +27,7 @@ final class StatusItemController: NSObject {
 
     func updateIcon() {
         let symbol = manager.activeRouteCount > 0 ? "hifispeaker.2.fill" : "hifispeaker.2"
-        statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "AudioRouter")
+        statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Soundfork")
     }
 
     private var hoverEnabled: Bool { UserDefaults.standard.bool(forKey: Self.hoverKey) }
@@ -53,7 +53,7 @@ final class StatusItemController: NSObject {
         reset.isEnabled = !manager.preferences.isEmpty
         menu.addItem(reset)
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit AudioRouter", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit Soundfork", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
         statusItem.menu = menu
         statusItem.button?.performClick(nil)

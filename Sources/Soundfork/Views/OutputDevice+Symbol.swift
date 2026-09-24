@@ -1,4 +1,4 @@
-import AudioRouterCore
+import SoundforkCore
 
 extension OutputDevice {
     var symbolName: String {

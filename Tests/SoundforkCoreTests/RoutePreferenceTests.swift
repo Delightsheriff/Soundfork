@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import AudioRouterCore
+@testable import SoundforkCore
 
 @Test func preferencesSavedBeforeVolumeExistedDecodeAtFullVolume() throws {
     let json = #"{"deviceUID":"BuiltInSpeakerDevice","tapBundleIDs":["com.google.Chrome.helper"]}"#

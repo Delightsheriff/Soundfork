@@ -1,4 +1,4 @@
-# AudioRouter
+# Soundfork
 
 Per-app audio output routing for macOS, from a dynamic-island panel in the menu bar.
 

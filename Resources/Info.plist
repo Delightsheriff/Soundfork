@@ -19,6 +19,6 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAudioCaptureUsageDescription</key>
-	<string>AudioRouter captures each app's audio so it can send it to the output device you choose.</string>
+	<string>Soundfork captures each app's audio so it can send it to the output device you choose.</string>
 </dict>
 </plist>

@@ -12,7 +12,7 @@ public final class RouteManager {
     private var routes: [String: Route] = [:]
     private let store: RouteStore
     private var deviceObserver: DeviceListObserver?
-    private let log = Logger(subsystem: "dev.local.AudioRouter", category: "routes")
+    private let log = Logger(subsystem: "com.delightsheriff.Soundfork", category: "routes")
 
     public init(store: RouteStore = RouteStore()) {
         self.store = store
