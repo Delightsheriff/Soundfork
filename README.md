@@ -47,14 +47,16 @@ macOS sends every app to the same output. Soundfork lets you pick an output **pe
 
 ### Download
 
-1. Download `Soundfork.zip` from the [Releases page](../../releases) (available from the first release on) and unzip it. It runs on Apple Silicon and Intel Macs.
-2. Drag **Soundfork.app** into **Applications** and open it.
-3. The first time, macOS says it can't verify the developer, because Soundfork isn't notarized by Apple. To open it anyway:
+1. Download **`Soundfork-<version>.dmg`** from the [Releases page](../../releases). It runs on Apple Silicon and Intel Macs.
+2. Open it and drag **Soundfork** onto the **Applications** shortcut.
+3. Open Soundfork from Applications. The first time, macOS says it can't verify the developer, because Soundfork isn't notarized by Apple. To open it anyway:
    - Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**, **or**
    - run `xattr -dr com.apple.quarantine /Applications/Soundfork.app` in Terminal.
 
    You only need to do this once.
 4. The welcome screen asks for **audio access**. Choose **Allow**; Soundfork needs it to move an app's audio to another device.
+
+Prefer a zip? Each release also has `Soundfork-<version>.zip` with the same app.
 
 ### Build from source
 
@@ -115,7 +117,7 @@ swift build                          # compile everything
 swift test                           # unit tests
 ./scripts/build-app.sh               # build/Soundfork.app
 ./scripts/install.sh                 # install to /Applications and relaunch
-./scripts/release.sh                 # universal build → build/Soundfork.zip for a GitHub release
+./scripts/release.sh                 # universal build → build/Soundfork-<version>.dmg and .zip for a GitHub release
 swift scripts/make-icon.swift        # re-render the app icon
 ./scripts/spike.sh --list            # list devices and audio processes
 ```

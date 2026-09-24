@@ -1,6 +1,8 @@
 #!/bin/zsh
-# Builds a universal (Apple Silicon + Intel) Soundfork.app and zips it for a GitHub release.
-#   ./scripts/release.sh   → build/Soundfork.zip (and build/Soundfork-<version>.zip)
+# Builds a universal (Apple Silicon + Intel) Soundfork.app and packages it for a GitHub release:
+#   build/Soundfork-<version>.dmg   drag-to-Applications disk image (what most people download)
+#   build/Soundfork-<version>.zip   the same app, zipped
+#   ./scripts/release.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -14,7 +16,17 @@ ARCHS="$(lipo -archs build/Soundfork.app/Contents/MacOS/Soundfork)"
 codesign --verify --strict build/Soundfork.app
 
 VERSION="$(cat VERSION)"
-rm -f build/Soundfork.zip "build/Soundfork-$VERSION.zip"
-ditto -c -k --keepParent build/Soundfork.app build/Soundfork.zip
-cp build/Soundfork.zip "build/Soundfork-$VERSION.zip"
-echo "built build/Soundfork.zip (v$VERSION, $ARCHS)"
+rm -f build/Soundfork*.zip(N) build/Soundfork*.dmg(N)
+
+ditto -c -k --keepParent build/Soundfork.app "build/Soundfork-$VERSION.zip"
+
+# Disk image: the app next to an Applications shortcut, so installing is one drag.
+STAGE="build/dmg-staging"
+rm -rf "$STAGE" && mkdir -p "$STAGE"
+ditto build/Soundfork.app "$STAGE/Soundfork.app"
+ln -s /Applications "$STAGE/Applications"
+hdiutil create -quiet -volname "Soundfork $VERSION" -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "build/Soundfork-$VERSION.dmg"
+rm -rf "$STAGE"
+hdiutil verify -quiet "build/Soundfork-$VERSION.dmg"
+
+echo "built build/Soundfork-$VERSION.dmg and build/Soundfork-$VERSION.zip (v$VERSION, $ARCHS)"
