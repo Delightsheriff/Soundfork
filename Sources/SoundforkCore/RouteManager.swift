@@ -106,7 +106,12 @@ public final class RouteManager {
             if permission == .unknown, !preferences.isEmpty { checkPermissionThenReconcile() }
             return
         }
-        let devices = (try? OutputDevices.all()) ?? []
+        // If the device list can't be read at all (mid-switch), keep the current routes and look again shortly,
+        // rather than treating it as "every device disappeared" and tearing routes down.
+        guard let devices = try? OutputDevices.all() else {
+            scheduleSettleCheck(in: 0.5)
+            return
+        }
         let byUID = Dictionary(devices.map { ($0.uid, $0) }, uniquingKeysWith: { first, _ in first })
         let (settled, nextCheck) = settling.update(present: Set(byUID.keys), now: .now)
         if let nextCheck { scheduleSettleCheck(in: nextCheck) }
