@@ -47,7 +47,8 @@ struct IslandView: View {
                 SettingsView(settings: model.settings) { withAnimation(Self.pageSpring) { model.page = .apps } }
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             case .welcome:
-                EmptyView()
+                WelcomeView(model: model) { withAnimation(Self.pageSpring) { model.finishWelcome() } }
+                    .transition(.opacity)
             }
         }
         .clipped()

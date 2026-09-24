@@ -63,6 +63,8 @@ final class IslandController {
             model.showOtherApps = false
             model.expandedPicker = nil
             if model.page == .settings { model.page = .apps }
+            // Dismissing the welcome counts as seeing it; it never comes back.
+            if model.page == .welcome { model.finishWelcome() }
         }
         model.stopLiveUpdates()
         let work = DispatchWorkItem { [weak self] in

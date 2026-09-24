@@ -90,6 +90,11 @@ final class IslandModel {
 
     // MARK: Actions
 
+    func finishWelcome() {
+        settings.hasCompletedWelcome = true
+        page = .apps
+    }
+
     func togglePicker(_ id: String) {
         expandedPicker = expandedPicker == id ? nil : id
     }

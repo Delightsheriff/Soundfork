@@ -32,6 +32,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // First launch only: introduce Soundfork from the notch. Launches at login stay silent.
+        if !settings.hasCompletedWelcome {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { island.open(on: NSScreen.main, page: .welcome) }
+        }
+
         // Development aid: `--snapshot <file.png>` renders the open island to an image and quits.
         if let index = CommandLine.arguments.firstIndex(of: "--snapshot"), index + 1 < CommandLine.arguments.count {
             IslandSnapshot.write(model: island.model, to: CommandLine.arguments[index + 1])
