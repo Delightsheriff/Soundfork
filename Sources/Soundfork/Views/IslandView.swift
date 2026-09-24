@@ -36,7 +36,24 @@ struct IslandView: View {
         return UnevenRoundedRectangle(bottomLeadingRadius: radius, bottomTrailingRadius: radius, style: .continuous)
     }
 
+    static let pageSpring = Animation.spring(response: 0.4, dampingFraction: 0.86)
+
     private var content: some View {
+        ZStack(alignment: .top) {
+            switch model.page {
+            case .apps:
+                appsPage.transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .leading)).combined(with: .opacity))
+            case .settings:
+                SettingsView(settings: model.settings) { withAnimation(Self.pageSpring) { model.page = .apps } }
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            case .welcome:
+                EmptyView()
+            }
+        }
+        .clipped()
+    }
+
+    private var appsPage: some View {
         VStack(alignment: .leading, spacing: 12) {
             systemOutput
             Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
@@ -140,6 +157,15 @@ struct IslandView: View {
             if model.hasCustomizations {
                 Button("Reset all", systemImage: "arrow.counterclockwise") { model.resetAll() }
             }
+            Button {
+                withAnimation(Self.pageSpring) { model.page = .settings }
+            } label: {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 12))
+                    .frame(width: 24, height: 24)
+                    .contentShape(Rectangle())
+            }
+            .help("Settings")
         }
         .buttonStyle(.plain)
         .font(.system(size: 11, weight: .medium))

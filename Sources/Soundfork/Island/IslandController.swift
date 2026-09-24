@@ -29,7 +29,8 @@ final class IslandController {
         isOpen ? close() : open(on: screen)
     }
 
-    func open(on screen: NSScreen?) {
+    func open(on screen: NSScreen?, page: IslandModel.Page? = nil) {
+        if let page { model.page = page }
         guard !isOpen, let screen = screen ?? NSScreen.main else { return }
         closeWork?.cancel()
         let notch = NotchGeometry(screen: screen)
@@ -61,6 +62,7 @@ final class IslandController {
             model.isOpen = false
             model.showOtherApps = false
             model.expandedPicker = nil
+            if model.page == .settings { model.page = .apps }
         }
         model.stopLiveUpdates()
         let work = DispatchWorkItem { [weak self] in
@@ -95,6 +97,8 @@ final class IslandController {
             guard event.keyCode == 53 else { return false }
             if model.expandedPicker != nil {
                 withAnimation(IslandView.pickerSpring) { model.expandedPicker = nil }
+            } else if model.page == .settings {
+                withAnimation(IslandView.pageSpring) { model.page = .apps }
             } else {
                 close()
             }
@@ -153,7 +157,7 @@ final class IslandController {
         }
         // Short dwell so sweeping the pointer across the top of the screen doesn't pop it open.
         if let dwellSince {
-            if Date.now.timeIntervalSince(dwellSince) >= 0.15 {
+            if Date.now.timeIntervalSince(dwellSince) >= model.settings.hoverSpeed.dwell {
                 self.dwellSince = nil
                 open(on: screen)
                 openedByHover = true

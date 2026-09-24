@@ -7,6 +7,13 @@ enum IslandSnapshot {
     static func write(model: IslandModel, to path: String) {
         model.refresh()
         model.isOpen = true
+        if let index = CommandLine.arguments.firstIndex(of: "--page"), index + 1 < CommandLine.arguments.count {
+            switch CommandLine.arguments[index + 1] {
+            case "settings": model.page = .settings
+            case "welcome": model.page = .welcome
+            default: break
+            }
+        }
         if let index = CommandLine.arguments.firstIndex(of: "--expand"), index + 1 < CommandLine.arguments.count {
             model.expandedPicker = CommandLine.arguments[index + 1]
         }

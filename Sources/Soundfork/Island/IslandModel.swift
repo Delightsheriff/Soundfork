@@ -30,12 +30,16 @@ final class IslandModel {
     private(set) var defaultDevice: OutputDevice?
     private(set) var systemVolume: Float?
     private(set) var systemMuted = false
+    enum Page { case apps, settings, welcome }
+
     var isOpen = false
+    var page: Page = .apps
     var showOtherApps = false
     /// Which device picker is unfolded: an app's bundle ID, `outputPickerID`, or nil.
     var expandedPicker: String?
     static let outputPickerID = "__output__"
 
+    let settings: AppSettings
     private let manager: RouteManager
     private var appInfo: [String: AppInfo] = [:]
     private var timer: Timer?
@@ -45,8 +49,9 @@ final class IslandModel {
         "com.apple.Safari", "com.apple.Music", "com.apple.TV", "com.apple.podcasts", "com.apple.QuickTimePlayerX",
     ]
 
-    init(manager: RouteManager) {
+    init(manager: RouteManager, settings: AppSettings) {
         self.manager = manager
+        self.settings = settings
     }
 
     var hasCustomizations: Bool { !manager.preferences.isEmpty }

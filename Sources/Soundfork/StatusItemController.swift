@@ -4,25 +4,27 @@ import SoundforkCore
 /// Menu-bar icon. Left click toggles the island; right click shows a small options menu.
 @MainActor
 final class StatusItemController: NSObject {
-    private static let hoverKey = "openOnNotchHover"
-
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let island: IslandController
     private let manager: RouteManager
+    private let settings: AppSettings
 
-    init(island: IslandController, manager: RouteManager) {
+    init(island: IslandController, manager: RouteManager, settings: AppSettings) {
         self.island = island
         self.manager = manager
+        self.settings = settings
         super.init()
-        UserDefaults.standard.register(defaults: [Self.hoverKey: true])
-
         if let button = statusItem.button {
             button.target = self
             button.action = #selector(clicked)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
-        island.setHoverToOpen(hoverEnabled)
+        applySettings()
         updateIcon()
+    }
+
+    func applySettings() {
+        statusItem.isVisible = settings.showMenuBarIcon
     }
 
     func updateIcon() {
@@ -30,23 +32,22 @@ final class StatusItemController: NSObject {
         statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Soundfork")
     }
 
-    private var hoverEnabled: Bool { UserDefaults.standard.bool(forKey: Self.hoverKey) }
+    var screen: NSScreen? { statusItem.button?.window?.screen }
 
     @objc private func clicked() {
         if NSApp.currentEvent?.type == .rightMouseUp {
             island.close()
             showOptionsMenu()
         } else {
-            island.toggle(on: statusItem.button?.window?.screen)
+            island.toggle(on: screen)
         }
     }
 
     private func showOptionsMenu() {
         let menu = NSMenu()
-        let hover = NSMenuItem(title: "Open When Hovering Over the Notch", action: #selector(toggleHover), keyEquivalent: "")
-        hover.target = self
-        hover.state = hoverEnabled ? .on : .off
-        menu.addItem(hover)
+        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
         menu.addItem(.separator())
         let reset = NSMenuItem(title: "Send Every App Back to Default", action: #selector(resetAll), keyEquivalent: "")
         reset.target = self
@@ -60,9 +61,8 @@ final class StatusItemController: NSObject {
         statusItem.menu = nil
     }
 
-    @objc private func toggleHover() {
-        UserDefaults.standard.set(!hoverEnabled, forKey: Self.hoverKey)
-        island.setHoverToOpen(hoverEnabled)
+    @objc private func openSettings() {
+        island.open(on: screen, page: .settings)
     }
 
     @objc private func resetAll() {
