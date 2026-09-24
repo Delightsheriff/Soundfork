@@ -35,3 +35,18 @@ Conclusions:
 - The permission prompt appeared on first tap creation (about 4 s delay before the first frames, once only).
 
 Still open: the 30-minute listening test on the real scenario (Spotify → Bluetooth while other audio stays on the MacBook).
+
+## D6: Name is Soundfork (2026-09-24)
+"Earshot" was the first choice, but at least six macOS apps on GitHub use it, including a menu-bar EQ
+and an AirPods/Bluetooth app that routes audio. "Soundfork" only matched a 2013 song-sharing site and a
+Flutter plugin, with no Mac app and no audio-routing tool. It's also the icon: a tuning fork splitting one sound two ways.
+Bundle ID `com.delightsheriff.Soundfork`; saved routes migrate from the old `dev.local.AudioRouter` domain.
+
+## D7: Global shortcut is ⌃⌥⌘S
+Apple's published shortcuts use ⌃⌥⌘ only for 8 (invert colors) and , / . (contrast), and nothing standard uses
+⌃⌥⌘S. It's registered with Carbon `RegisterEventHotKey`, which needs no Accessibility permission and reports
+a clash if another app already owns the combination; Settings shows that and lets you turn it off.
+
+## D8: Background-first app
+No Dock icon or windows (`LSUIElement`). The welcome shows once; launches at login are silent. The menu-bar icon
+can be hidden, but hover, the shortcut, or the icon always stays available, and launching the app again opens the island.

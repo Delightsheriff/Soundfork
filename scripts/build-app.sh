@@ -14,7 +14,16 @@ case "$PRODUCT" in
 esac
 
 # Same identity every build, or macOS re-asks for audio-capture permission.
-SIGN_IDENTITY="${SIGN_IDENTITY:-A35B7B9540258361673828381CC2BE24675A850B}"
+# Order: $SIGN_IDENTITY, the maintainer's certificate, any Apple Development certificate, ad-hoc ("-").
+if [[ -z "${SIGN_IDENTITY:-}" ]]; then
+  IDENTITIES="$(security find-identity -v -p codesigning 2>/dev/null || true)"
+  if [[ "$IDENTITIES" == *A35B7B9540258361673828381CC2BE24675A850B* ]]; then
+    SIGN_IDENTITY=A35B7B9540258361673828381CC2BE24675A850B
+  else
+    SIGN_IDENTITY="$(awk '/Apple Development/ {print $2; exit}' <<< "$IDENTITIES")"
+    SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+  fi
+fi
 
 swift build -c release --product "$PRODUCT"
 BIN="$(swift build -c release --show-bin-path)/$PRODUCT"

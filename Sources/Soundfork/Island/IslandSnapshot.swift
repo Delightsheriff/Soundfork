@@ -18,9 +18,11 @@ enum IslandSnapshot {
             model.expandedPicker = CommandLine.arguments[index + 1]
         }
         let notch = NSScreen.main.map { NotchGeometry(screen: $0).size } ?? CGSize(width: 185, height: 32)
+        // Transparent, sized to the island itself plus room for its shadow.
         let view = IslandView(model: model, notch: notch, onIslandFrame: { _ in })
-            .frame(width: 480, height: 760)
-            .background(Color(white: 0.55))
+            .frame(width: 480)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.bottom, 40)
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2
         guard let image = renderer.nsImage, let tiff = image.tiffRepresentation,

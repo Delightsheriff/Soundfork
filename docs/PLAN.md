@@ -1,6 +1,6 @@
 # Plan
 
-**Active phase: 6** (lifecycle hardening). Phases 0–5 done: engine, discovery, island UI, persistence. Per-app volume, gain smoothing, make-before-break switching, and notch hover shipped early.
+**Status (2026-09-24):** v1.0.0 feature-complete: routing, per-app volume, island UI, settings, shortcut, login item, welcome, icon, hardening. Next: macOS 14.4 support and a GitHub release.
 
 ## How we work
 
