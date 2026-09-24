@@ -8,12 +8,18 @@
 	<string>$(NAME)</string>
 	<key>CFBundleExecutable</key>
 	<string>$(NAME)</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleDisplayName</key>
+	<string>$(NAME)</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Delight Sheriff. MIT License.</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1</string>
+	<string>$(VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$(BUILD)</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>26.0</string>
 	<key>LSUIElement</key>

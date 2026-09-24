@@ -23,7 +23,12 @@ APP="build/$NAME.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 cp "$BIN" "$APP/Contents/MacOS/$NAME"
-sed -e "s/\$(BUNDLE_ID)/$BUNDLE_ID/g" -e "s/\$(NAME)/$NAME/g" Resources/Info.plist > "$APP/Contents/Info.plist"
+VERSION="$(cat VERSION)"
+BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
+sed -e "s/\$(BUNDLE_ID)/$BUNDLE_ID/g" -e "s/\$(NAME)/$NAME/g" -e "s/\$(VERSION)/$VERSION/g" -e "s/\$(BUILD)/$BUILD/g" \
+  Resources/Info.plist > "$APP/Contents/Info.plist"
+mkdir -p "$APP/Contents/Resources"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 codesign --force --sign "$SIGN_IDENTITY" --identifier "$BUNDLE_ID" "$APP"
 echo "built $APP"

@@ -28,8 +28,7 @@ final class StatusItemController: NSObject {
     }
 
     func updateIcon() {
-        let symbol = manager.activeRouteCount > 0 ? "hifispeaker.2.fill" : "hifispeaker.2"
-        statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Soundfork")
+        statusItem.button?.image = StatusGlyph.image(active: manager.activeRouteCount > 0)
     }
 
     var screen: NSScreen? { statusItem.button?.window?.screen }
