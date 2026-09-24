@@ -39,5 +39,6 @@ sed -e "s/\$(BUNDLE_ID)/$BUNDLE_ID/g" -e "s/\$(NAME)/$NAME/g" -e "s/\$(VERSION)/
 mkdir -p "$APP/Contents/Resources"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
-codesign --force --sign "$SIGN_IDENTITY" --identifier "$BUNDLE_ID" "$APP"
+# Hardened runtime: blocks code injection into a process that holds the audio-capture permission.
+codesign --force --options runtime --sign "$SIGN_IDENTITY" --identifier "$BUNDLE_ID" "$APP"
 echo "built $APP"
