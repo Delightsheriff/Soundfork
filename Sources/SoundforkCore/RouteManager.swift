@@ -18,6 +18,10 @@ public final class RouteManager {
     private var settleWork: DispatchWorkItem?
     private var saveWork: DispatchWorkItem?
     private var reconcileScheduled = false
+    /// Tap creation blocks until the user answers the audio-capture prompt, so the first route waits for an
+    /// off-main permission check instead of freezing the main thread.
+    private var permission = PermissionState.unknown
+    private enum PermissionState { case unknown, checking, settled }
     private let log = Logger(subsystem: AppIdentity.bundleID, category: "routes")
 
     public init(store: RouteStore = RouteStore()) {
@@ -98,6 +102,10 @@ public final class RouteManager {
     }
 
     public func reconcile() {
+        guard permission == .settled else {
+            if permission == .unknown, !preferences.isEmpty { checkPermissionThenReconcile() }
+            return
+        }
         let devices = (try? OutputDevices.all()) ?? []
         let byUID = Dictionary(devices.map { ($0.uid, $0) }, uniquingKeysWith: { first, _ in first })
         let (settled, nextCheck) = settling.update(present: Set(byUID.keys), now: .now)
@@ -165,6 +173,16 @@ public final class RouteManager {
         if changed {
             save()
             scheduleReconcile()
+        }
+    }
+
+    private func checkPermissionThenReconcile() {
+        permission = .checking
+        Task { [weak self] in
+            await AudioCapturePermission.request()
+            guard let self else { return }
+            permission = .settled
+            reconcile()
         }
     }
 

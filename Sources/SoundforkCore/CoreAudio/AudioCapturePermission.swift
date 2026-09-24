@@ -16,7 +16,7 @@ public enum AudioCapturePermission {
         description.muteBehavior = .unmuted
         guard let probe = try? TapAggregate(tap: description, outputUID: output.uid, name: "Soundfork permission check",
                                             ioProc: silentIOProc, clientData: nil) else { return }
-        Thread.sleep(forTimeInterval: 0.5)
+        Thread.sleep(forTimeInterval: 0.1)
         probe.stop()
     }
 }
