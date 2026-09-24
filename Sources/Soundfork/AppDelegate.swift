@@ -17,6 +17,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.island = island
         self.statusItem = statusItem
 
+        // Bluetooth devices often reconnect a little after wake; rebuild once things have settled.
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                MainActor.assumeIsolated { manager.rebuildAll(reason: "woke from sleep") }
+            }
+        }
+
         // Development aid: `open build/Soundfork.app --args --open` shows the island right away.
         // Development aid: `--snapshot <file.png>` renders the open island to an image and quits.
         if let index = CommandLine.arguments.firstIndex(of: "--snapshot"), index + 1 < CommandLine.arguments.count {

@@ -11,13 +11,26 @@ public final class RouteManager {
 
     private var routes: [String: Route] = [:]
     private let store: RouteStore
-    private var deviceObserver: DeviceListObserver?
+    private var hardwareObserver: HardwareObserver?
+    /// When each device UID was first seen. Newly connected devices (Bluetooth especially) get a moment
+    /// to settle before routes move onto them.
+    private var firstSeen: [String: Date] = [:]
+    private var settleWork: DispatchWorkItem?
+    private static let settleDelay: TimeInterval = 1.5
     private let log = Logger(subsystem: "com.delightsheriff.Soundfork", category: "routes")
 
     public init(store: RouteStore = RouteStore()) {
         self.store = store
         preferences = store.load()
-        deviceObserver = try? DeviceListObserver { [weak self] in self?.reconcile() }
+        // Devices present at launch count as settled.
+        let launch = Date.distantPast
+        for device in (try? OutputDevices.all()) ?? [] { firstSeen[device.uid] = launch }
+        hardwareObserver = try? HardwareObserver { [weak self] change in
+            switch change {
+            case .devices: self?.reconcile()
+            case .serviceRestarted: self?.rebuildAll(reason: "audio service restarted")
+            }
+        }
         reconcile()
     }
 
@@ -79,8 +92,17 @@ public final class RouteManager {
         routes = [:]
     }
 
+    /// Throws away every route and builds them again: after wake, or when coreaudiod restarted and
+    /// every object ID we hold is stale.
+    public func rebuildAll(reason: String) {
+        log.notice("rebuilding all routes: \(reason, privacy: .public)")
+        for (bundleID, route) in routes { stop(route, bundleID) }
+        routes = [:]
+        reconcile()
+    }
+
     public func reconcile() {
-        let connected = Set((try? OutputDevices.all())?.map(\.uid) ?? [])
+        let connected = settledDevices()
         let defaultUID = (try? OutputDevices.defaultOutput())?.uid
 
         // Where each preference should play right now: its chosen device, or the default if that's missing.
@@ -120,6 +142,23 @@ public final class RouteManager {
         for (bundleID, route) in replaced { stop(route, bundleID) }
         errors = errors.filter { preferences[$0.key] != nil }
         onChange?()
+    }
+
+    /// UIDs of connected devices that have been around for `settleDelay`; schedules a re-check for the rest.
+    private func settledDevices() -> Set<String> {
+        let now = Date.now
+        let present = Set(((try? OutputDevices.all()) ?? []).map(\.uid))
+        firstSeen = firstSeen.filter { present.contains($0.key) }
+        for uid in present where firstSeen[uid] == nil { firstSeen[uid] = now }
+
+        let pending = firstSeen.values.map { Self.settleDelay - now.timeIntervalSince($0) }.filter { $0 > 0 }
+        if let wait = pending.min() {
+            settleWork?.cancel()
+            let work = DispatchWorkItem { [weak self] in MainActor.assumeIsolated { self?.reconcile() } }
+            settleWork = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + wait + 0.05, execute: work)
+        }
+        return Set(firstSeen.filter { now.timeIntervalSince($0.value) >= Self.settleDelay }.keys)
     }
 
     private func preference(for app: AudioApp) -> RoutePreference {
