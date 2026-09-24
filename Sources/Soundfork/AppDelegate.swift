@@ -25,11 +25,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.hotKey = hotKey
         applySettings()
 
-        // Bluetooth devices often reconnect a little after wake; rebuild once things have settled.
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                MainActor.assumeIsolated { manager.rebuildAll(reason: "woke from sleep") }
-            }
+            MainActor.assumeIsolated { manager.handleWake() }
         }
 
         // First launch only: introduce Soundfork from the notch. Launches at login stay silent.
@@ -37,13 +34,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { island.open(on: NSScreen.main, page: .welcome) }
         }
 
-        // Development aid: `--snapshot <file.png>` renders the open island to an image and quits.
-        if let index = CommandLine.arguments.firstIndex(of: "--snapshot"), index + 1 < CommandLine.arguments.count {
-            IslandSnapshot.write(model: island.model, to: CommandLine.arguments[index + 1])
+        let options = LaunchOptions()
+        if let path = options.snapshotPath {
+            IslandSnapshot.write(model: island.model, to: path, page: options.snapshotPage, expandedPicker: options.expandedPicker)
             NSApp.terminate(nil)
         }
-        // Development aid: `open build/Soundfork.app --args --open` shows the island right away.
-        if CommandLine.arguments.contains("--open") {
+        if options.openIsland {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { island.open(on: NSScreen.main) }
         }
     }

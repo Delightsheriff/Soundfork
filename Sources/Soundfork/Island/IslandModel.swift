@@ -11,18 +11,17 @@ final class IslandModel {
         let app: AudioApp
         let name: String
         let icon: NSImage?
-        /// The device the user picked, or nil for "System default".
-        let chosenDevice: (uid: String, name: String)?
-        /// Picked device is disconnected; audio is on the default output meanwhile.
+        /// The device the user picked (nil = System default). The name survives while it's disconnected.
+        let chosenUID: String?
+        let chosenName: String?
+        let chipSymbol: String
+        /// A device was picked but the app is playing somewhere else right now (disconnected or still settling).
         let isFallingBack: Bool
-        let volume: Float
+        var volume: Float
         let error: String?
-
-        static func == (a: Row, b: Row) -> Bool {
-            a.app == b.app && a.chosenDevice?.uid == b.chosenDevice?.uid && a.isFallingBack == b.isFallingBack
-                && a.volume == b.volume && a.error == b.error
-        }
     }
+
+    enum Page { case apps, settings, welcome }
 
     private(set) var rows: [Row] = []
     private(set) var otherRows: [Row] = []
@@ -30,7 +29,6 @@ final class IslandModel {
     private(set) var defaultDevice: OutputDevice?
     private(set) var systemVolume: Float?
     private(set) var systemMuted = false
-    enum Page { case apps, settings, welcome }
 
     var isOpen = false
     var page: Page = .apps
@@ -71,11 +69,15 @@ final class IslandModel {
 
     func refresh() {
         let apps = ((try? AudioApps.current()) ?? []).filter(isRoutable)
-        manager.absorbNewHelpers(from: apps)
-        devices = (try? OutputDevices.all()) ?? []
-        defaultDevice = try? OutputDevices.defaultOutput()
-        systemVolume = defaultDevice.flatMap { DeviceVolume.get($0.objectID) }
-        systemMuted = defaultDevice.map { DeviceVolume.isMuted($0.objectID) } ?? false
+        let devices = (try? OutputDevices.all()) ?? []
+        let defaultDevice = try? OutputDevices.defaultOutput(in: devices)
+        // Only publish values that changed, so SwiftUI doesn't re-render the island every tick.
+        if devices != self.devices { self.devices = devices }
+        if defaultDevice != self.defaultDevice { self.defaultDevice = defaultDevice }
+        let volume = defaultDevice.flatMap { DeviceVolume.get($0.objectID) }
+        if volume != systemVolume { systemVolume = volume }
+        let muted = defaultDevice.map { DeviceVolume.isMuted($0.objectID) } ?? false
+        if muted != systemMuted { systemMuted = muted }
 
         // Customized apps that aren't running still get a row, so they can be reset.
         let running = Set(apps.map(\.bundleID))
@@ -84,8 +86,13 @@ final class IslandModel {
             .map { AudioApp(bundleID: $0.key, tapBundleIDs: $0.value.tapBundleIDs, isPlaying: false) }
 
         let all = (apps + absent).map(row).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        rows = all.filter { $0.app.isPlaying || manager.preferences[$0.id] != nil }
-        otherRows = all.filter { !$0.app.isPlaying && manager.preferences[$0.id] == nil }
+        var shown: [Row] = []
+        var others: [Row] = []
+        for row in all {
+            if row.app.isPlaying || manager.preferences[row.id] != nil { shown.append(row) } else { others.append(row) }
+        }
+        if shown != rows { rows = shown }
+        if others != otherRows { otherRows = others }
     }
 
     // MARK: Actions
@@ -105,16 +112,24 @@ final class IslandModel {
         refresh()
     }
 
+    /// Called for every slider tick: patch the one row instead of re-reading Core Audio.
     func setVolume(_ volume: Float, for row: Row) {
         manager.setVolume(volume, for: row.app)
-        refresh()
+        if let index = rows.firstIndex(where: { $0.id == row.id }) {
+            rows[index].volume = volume
+        } else if let index = otherRows.firstIndex(where: { $0.id == row.id }) {
+            otherRows[index].volume = volume
+        }
     }
 
     func setSystemVolume(_ volume: Float) {
         guard let defaultDevice else { return }
         try? DeviceVolume.set(volume, on: defaultDevice.objectID)
-        if systemMuted, volume > 0 { try? DeviceVolume.setMuted(false, on: defaultDevice.objectID) }
-        refresh()
+        if systemMuted, volume > 0 {
+            try? DeviceVolume.setMuted(false, on: defaultDevice.objectID)
+            systemMuted = false
+        }
+        systemVolume = volume
     }
 
     func toggleSystemMute() {
@@ -139,15 +154,16 @@ final class IslandModel {
     private func row(for app: AudioApp) -> Row {
         let info = info(for: app.bundleID)
         let preference = manager.preferences[app.bundleID]
-        let chosen = preference?.deviceUID.map { uid in
-            (uid: uid, name: devices.first { $0.uid == uid }?.name ?? preference?.deviceName ?? "Unknown device")
-        }
+        let chosenUID = preference?.deviceUID
+        let chosenDevice = chosenUID.flatMap { uid in devices.first { $0.uid == uid } }
         return Row(
             app: app,
             name: info.name,
             icon: info.icon,
-            chosenDevice: chosen,
-            isFallingBack: chosen.map { chosen in !devices.contains { $0.uid == chosen.uid } } ?? false,
+            chosenUID: chosenUID,
+            chosenName: chosenDevice?.name ?? preference?.deviceName ?? chosenUID.map { _ in "Unknown device" },
+            chipSymbol: chosenUID == nil ? DeviceSymbol.systemDefault : chosenDevice?.symbolName ?? DeviceSymbol.missing,
+            isFallingBack: chosenUID != nil && manager.currentDestination(for: app.bundleID) != chosenUID,
             volume: preference?.volume ?? 1,
             error: manager.errors[app.bundleID]
         )

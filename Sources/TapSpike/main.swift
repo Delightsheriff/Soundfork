@@ -3,7 +3,7 @@
 //   open -W --stdout build/spike.log --stderr build/spike.log build/TapSpike.app --args [options]
 //
 //   --list                 print output devices and audio processes, then exit
-//   --source <bundleID>    app to route (default com.spotify.client); helpers with that prefix are included
+//   --source <bundleID>    app to route (default com.spotify.client); its helper processes are included
 //   --dest <text>          destination device: UID or part of its name (default: first Bluetooth device)
 //   --by-bundle            tap by bundle ID (macOS 26 API) instead of by process object
 //   --seconds <n>          stop after n seconds (default: run until SIGINT/SIGTERM)
@@ -80,7 +80,7 @@ final class Spike {
     func source() throws -> Route.Source? {
         if options.byBundle { return .bundleIDs([options.source]) }
         let ids = try AudioProcesses.all()
-            .filter { $0.bundleID == options.source || $0.bundleID.hasPrefix(options.source + ".") }
+            .filter { AudioApps.owner(ofProcess: $0.bundleID) == options.source }
             .map(\.objectID)
         return ids.isEmpty ? nil : .processes(ids)
     }
@@ -96,11 +96,12 @@ final class Spike {
             exit(1)
         }
         log("ROUTE \(source) → \(device.name) (\(device.uid)) volume=\(options.volume)")
-        let route = try Route(source: source, destinationUID: device.uid, volume: options.volume)
-        let d = route.diagnostics
-        log("tap format:        \(describe(d.tapFormat))")
-        log("aggregate:         \(d.aggregateSampleRate) Hz, in \(d.aggregateInput.buffers) buf/\(d.aggregateInput.channels) ch, out \(d.aggregateOutput.buffers) buf/\(d.aggregateOutput.channels) ch")
-        log("destination:       \(device.sampleRate) Hz, \(d.destinationInputBuffers) input buffer(s) skipped")
+        let route = try Route(source: source, destination: device, volume: options.volume)
+        if let d = try route.diagnostics() {
+            log("tap format:        \(describe(d.tapFormat))")
+            log("aggregate:         \(d.aggregateSampleRate) Hz, in \(d.aggregateInput.buffers) buf/\(d.aggregateInput.channels) ch, out \(d.aggregateOutput.buffers) buf/\(d.aggregateOutput.channels) ch")
+            log("destination:       \(device.sampleRate) Hz, \(d.skippedInputBuffers) input buffer(s) skipped")
+        }
         self.route = route
         started = .now
     }

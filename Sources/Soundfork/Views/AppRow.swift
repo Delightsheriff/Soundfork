@@ -27,9 +27,9 @@ struct AppRow: View {
                     }
                     Spacer(minLength: 8)
                     DeviceChip(
-                        title: chipTitle,
-                        symbol: chipSymbol,
-                        highlighted: row.chosenDevice != nil,
+                        title: row.chosenName ?? "Default",
+                        symbol: row.chipSymbol,
+                        highlighted: row.chosenUID != nil,
                         warning: row.isFallingBack,
                         isExpanded: isPickerExpanded,
                         onTap: onTogglePicker
@@ -38,14 +38,14 @@ struct AppRow: View {
                 if isPickerExpanded {
                     DevicePicker(
                         devices: devices,
-                        selectedUID: row.chosenDevice?.uid,
+                        selectedUID: row.chosenUID,
                         defaultOption: ("System default", defaultDevice?.name),
                         onSelect: onSelect
                     )
                     .padding(.top, 2)
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
-                VolumeLine(value: row.volume, tint: row.volume < 0.995 ? .white : .white.opacity(0.85), onChange: onVolume)
+                VolumeLine(value: row.volume, tint: row.volume < RoutePreference.fullVolume ? .white : .white.opacity(0.85), onChange: onVolume)
                 if let note {
                     Text(note)
                         .font(.system(size: 10.5))
@@ -70,20 +70,10 @@ struct AppRow: View {
         .padding(.top, 2)
     }
 
-    private var chipTitle: String {
-        guard let chosen = row.chosenDevice else { return "Default" }
-        return chosen.name
-    }
-
-    private var chipSymbol: String {
-        guard let chosen = row.chosenDevice else { return "arrow.triangle.branch" }
-        return devices.first { $0.uid == chosen.uid }?.symbolName ?? "speaker.slash"
-    }
-
     private var note: String? {
         if let error = row.error { return error }
-        if row.isFallingBack, let chosen = row.chosenDevice {
-            return "\(chosen.name) is disconnected. Playing on \(defaultDevice?.name ?? "the default output") until it's back."
+        if row.isFallingBack, let chosen = row.chosenName {
+            return "\(chosen) isn't available. Playing on \(defaultDevice?.name ?? "the default output") until it's back."
         }
         return nil
     }

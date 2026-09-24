@@ -2,7 +2,7 @@ import CoreAudio
 import Foundation
 
 /// Triggers macOS's audio-capture permission prompt without changing what anyone hears:
-/// an unmuted, private global tap is read for a moment and then torn down.
+/// an unmuted global tap is read for a moment and then torn down.
 public enum AudioCapturePermission {
     /// Runs off the main thread: tap creation blocks until the user answers the prompt.
     public static func request() async {
@@ -10,36 +10,14 @@ public enum AudioCapturePermission {
     }
 
     private static func probe() {
+        guard let output = try? OutputDevices.defaultOutput() else { return }
         let description = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
         description.name = "Soundfork permission check"
         description.muteBehavior = .unmuted
-        description.isPrivate = true
-
-        var tapID = AudioObjectID(kAudioObjectUnknown)
-        guard AudioHardwareCreateProcessTap(description, &tapID) == noErr else { return }
-        defer { AudioHardwareDestroyProcessTap(tapID) }
-
-        guard let output = try? OutputDevices.defaultOutput() else { return }
-        let aggregate: [String: Any] = [
-            kAudioAggregateDeviceNameKey: "Soundfork permission check",
-            kAudioAggregateDeviceUIDKey: "com.delightsheriff.Soundfork.probe.\(UUID().uuidString)",
-            kAudioAggregateDeviceMainSubDeviceKey: output.uid,
-            kAudioAggregateDeviceIsPrivateKey: true,
-            kAudioAggregateDeviceTapAutoStartKey: true,
-            kAudioAggregateDeviceSubDeviceListKey: [[kAudioSubDeviceUIDKey: output.uid]],
-            kAudioAggregateDeviceTapListKey: [[kAudioSubTapUIDKey: description.uuid.uuidString]],
-        ]
-        var aggregateID = AudioObjectID(kAudioObjectUnknown)
-        guard AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID) == noErr else { return }
-        defer { AudioHardwareDestroyAggregateDevice(aggregateID) }
-
-        var ioProcID: AudioDeviceIOProcID?
-        guard AudioDeviceCreateIOProcID(aggregateID, silentIOProc, nil, &ioProcID) == noErr, let ioProcID else { return }
-        defer { AudioDeviceDestroyIOProcID(aggregateID, ioProcID) }
-        if AudioDeviceStart(aggregateID, ioProcID) == noErr {
-            Thread.sleep(forTimeInterval: 0.5)
-            AudioDeviceStop(aggregateID, ioProcID)
-        }
+        guard let probe = try? TapAggregate(tap: description, outputUID: output.uid, name: "Soundfork permission check",
+                                            ioProc: silentIOProc, clientData: nil) else { return }
+        Thread.sleep(forTimeInterval: 0.5)
+        probe.stop()
     }
 }
 

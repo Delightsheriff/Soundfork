@@ -21,17 +21,15 @@ public enum OutputDevices {
         }
     }
 
-    public static func defaultOutput() throws -> OutputDevice? {
+    /// The Mac's default output. Pass `devices` when you already have the list, to avoid enumerating again.
+    public static func defaultOutput(in devices: [OutputDevice]? = nil) throws -> OutputDevice? {
         let id = try AudioObjectID.system.read(kAudioHardwarePropertyDefaultOutputDevice, initial: AudioObjectID(kAudioObjectUnknown))
-        return try all().first { $0.objectID == id }
+        return try (devices ?? all()).first { $0.objectID == id }
     }
 
     /// Changes the Mac's default output, same as picking it in Control Center.
     public static func setDefault(_ device: OutputDevice) throws {
-        var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultOutputDevice,
-                                                 mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
-        var id = device.objectID
-        try check(AudioObjectSetPropertyData(.system, &address, 0, nil, UInt32(MemoryLayout<AudioObjectID>.size), &id), "set default output")
+        try AudioObjectID.system.write(kAudioHardwarePropertyDefaultOutputDevice, value: device.objectID)
     }
 
     static func kind(for transport: UInt32) -> OutputDevice.Kind {

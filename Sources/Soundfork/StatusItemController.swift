@@ -28,7 +28,8 @@ final class StatusItemController: NSObject {
     }
 
     func updateIcon() {
-        statusItem.button?.image = StatusGlyph.image(active: manager.activeRouteCount > 0)
+        let image = manager.hasActiveRoutes ? StatusGlyph.active : StatusGlyph.idle
+        if statusItem.button?.image !== image { statusItem.button?.image = image }
     }
 
     var screen: NSScreen? { statusItem.button?.window?.screen }

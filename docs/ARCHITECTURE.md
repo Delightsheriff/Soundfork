@@ -4,162 +4,111 @@
 
 | Concern | Choice | Why |
 |---|---|---|
-| Language | Swift 6.4, Swift 6 language mode | Native, first-class Core Audio access, strict concurrency catches thread bugs |
-| UI | SwiftUI views hosted in AppKit windows | SwiftUI for the content; AppKit for the island window, which SwiftUI's `MenuBarExtra` can't position or animate |
-| Menu-bar icon | `NSStatusItem` | Full control over click handling (MenuBarExtra always opens its own popover) |
-| Island window | Borderless, non-activating `NSPanel` + `NSHostingView` | Floats above everything at top-center without stealing focus |
-| Audio | Core Audio HAL C API (`AudioHardwareCreateProcessTap`, `CATapDescription`, `AudioHardwareCreateAggregateDevice`, `AudioDeviceCreateIOProcIDWithBlock`) | The only public, driver-free way to capture and redirect a single app's audio |
-| Real-time shared state | `Synchronization.Atomic` (stdlib) | Lock-free volume/mute/counters readable from the IOProc |
-| Persistence | `UserDefaults` (one Codable blob) | Tiny data: `[bundleID: RoutePreference]` |
-| Build | SwiftPM package + `scripts/build-app.sh` | Plain-text project with no `.xcodeproj`; builds entirely from the command line |
-| Signing | "Apple Development" identity already in the keychain | Stable signature so the audio-capture permission persists between builds |
-| Deployment target | macOS 26 | Personal tool on a macOS 27 machine; lets us use the newest tap APIs |
-| Sandbox | Off | Not shipping to the App Store; avoids sandbox restrictions on taps and aggregate devices |
-| Network | None | Fully offline |
-
-Info.plist keys: `LSUIElement = YES` (no Dock icon), `NSAudioCaptureUsageDescription` (required for taps),
-`CFBundleIdentifier = com.delightsheriff.Soundfork`.
+| Language | Swift 6.4, Swift 6 language mode | Native Core Audio access; strict concurrency catches thread bugs |
+| UI | SwiftUI views hosted in AppKit windows | SwiftUI for content; AppKit for the island panel, which `MenuBarExtra` can't position or animate |
+| Menu-bar icon | `NSStatusItem` with a template glyph | Full control over left/right click |
+| Island window | Borderless, non-activating `NSPanel` + `NSHostingView` | Floats over the menu bar without stealing focus |
+| Audio | Core Audio HAL: process taps (`CATapDescription`, `AudioHardwareCreateProcessTap`), private aggregate devices, IOProcs | The public, driver-free way to capture one app's audio and send it elsewhere |
+| Real-time shared state | `Synchronization.Atomic` | Lock-free volume and meters readable from the IOProc |
+| Persistence | `UserDefaults` | Routes as one JSON blob keyed by bundle ID; settings as plain keys |
+| Global shortcut | Carbon `RegisterEventHotKey` | No Accessibility permission needed |
+| Login item | `SMAppService.mainApp` | |
+| Build | SwiftPM + `scripts/build-app.sh` | Plain-text project with no `.xcodeproj`; builds entirely from the command line |
+| Deployment target | macOS 26 | Taps by bundle ID with process restore (D5) |
+| Sandbox / network | Off / none | Not an App Store app; fully offline |
 
 ## Package layout
 
 ```
-Soundfork/
-├── Package.swift
-├── Resources/Info.plist
-├── scripts/build-app.sh            # swift build -c release → assemble .app → codesign
-├── Sources/
-│   ├── SoundforkCore/            # library: no UI, testable
-│   │   ├── CoreAudio/
-│   │   │   ├── CoreAudioError.swift
-│   │   │   ├── AudioObject+Properties.swift   # typed get/set helpers for AudioObjectGetPropertyData
-│   │   │   ├── OutputDevices.swift            # list outputs, observe add/remove, default device
-│   │   │   ├── AudioProcesses.swift           # list audio processes, observe changes
-│   │   │   └── Route.swift                    # tap + aggregate + IOProc lifecycle
-│   │   ├── Model/
-│   │   │   ├── OutputDevice.swift             # uid, name, objectID, transport (bluetooth/builtin/...)
-│   │   │   ├── AudioApp.swift                 # bundleID, name, icon, processObjectIDs, isPlaying
-│   │   │   └── RoutePreference.swift          # deviceUID, volume, muted
-│   │   ├── RouteManager.swift                 # @MainActor; owns [bundleID: Route], reconciles
-│   │   └── RouteStore.swift                   # UserDefaults persistence
-│   ├── Soundfork/             # executable: AppKit + SwiftUI
-│   │   ├── main.swift / AppDelegate.swift
-│   │   ├── StatusItemController.swift
-│   │   ├── IslandPanel.swift                  # NSPanel subclass + positioning
-│   │   └── Views/ (IslandView, AppRow, DevicePicker)
-│   └── TapSpike/                   # Phase 1 only: hard-coded single route, deleted later
-└── Tests/SoundforkCoreTests/     # pure logic only (grouping, reconciliation, persistence)
+Sources/
+├── SoundforkCore/                  # library: no UI
+│   ├── CoreAudio/
+│   │   ├── AudioObject+Properties.swift   # typed read/write/has helpers for AudioObject properties
+│   │   ├── CoreAudioError.swift           # OSStatus → error with call name and four-char code
+│   │   ├── OutputDevices.swift            # list outputs, default output, set default
+│   │   ├── AudioProcesses.swift           # processes Core Audio knows about
+│   │   ├── DeviceVolume.swift             # a device's own volume and mute
+│   │   ├── HardwareObserver.swift         # device, default-output, process-list and restart notifications
+│   │   ├── TapAggregate.swift             # tap + private aggregate + IOProc, torn down in order
+│   │   ├── Route.swift                    # one app → one device, built on TapAggregate
+│   │   ├── RouteRenderer.swift            # the real-time IOProc: copy + ramped gain
+│   │   └── AudioCapturePermission.swift   # raises the permission prompt without changing audio
+│   ├── Model/  (OutputDevice, AudioProcess, AudioApp, RoutePreference)
+│   ├── AudioApps.swift                    # group helper processes under their app
+│   ├── RouteManager.swift                 # owns all routes; reconciles them with preferences and hardware
+│   ├── RouteStore.swift                   # persistence
+│   └── AppIdentity.swift                  # bundle ID shared by logging, aggregates and self-exclusion
+├── Soundfork/                      # the app: AppKit + SwiftUI
+│   ├── AppDelegate.swift, main.swift, LaunchOptions.swift
+│   ├── StatusItemController.swift, StatusGlyph.swift, AppInfo.swift
+│   ├── Island/     (IslandController, IslandPanel, IslandModel, NotchGeometry, IslandSnapshot)
+│   ├── Settings/   (AppSettings, GlobalHotKey)
+│   └── Views/      (IslandView, AppRow, DeviceChip, DevicePicker, VolumeLine, PillSlider, SettingsView, WelcomeView, …)
+└── TapSpike/                       # command-line diagnostic: route one app and log formats and levels
 ```
 
-## Audio engine: one route
+Only `SoundforkCore/CoreAudio/` calls the Core Audio C API.
 
-A `Route` moves one app's audio to one output device.
+## A route
 
-```
-start(processObjectIDs, destinationUID)
-  1. tapDesc = CATapDescription(stereoMixdownOfProcesses: processObjectIDs)
-     tapDesc.muteBehavior = .mutedWhenTapped
-     tapDesc.isPrivate = true
-  2. AudioHardwareCreateProcessTap(tapDesc) → tapID
-  3. read kAudioTapPropertyFormat (log it)
-  4. AudioHardwareCreateAggregateDevice([
-        UID: "com.delightsheriff.Soundfork.route.<uuid>",
-        IsPrivate: true,
-        MainSubDevice: destinationUID,
-        SubDeviceList: [[UID: destinationUID]],
-        TapList: [[UID: tapDesc.uuid, DriftCompensation: true]],
-        TapAutoStart: true ]) → aggregateID
-  5. AudioDeviceCreateIOProcIDWithBlock(aggregateID) { inInput, outOutput in
-        copy input buffers → output buffers, × volume (atomic); zero output if muted
-     }
-  6. AudioDeviceStart(aggregateID, ioProcID)
+`Route(source: .bundleIDs([...]), destination:, volume:)` sends one app's audio to one output device:
 
-stop()   (reverse order, always runs even if start partly failed)
-  AudioDeviceStop → AudioDeviceDestroyIOProcID → AudioHardwareDestroyAggregateDevice → AudioHardwareDestroyProcessTap
-```
+1. **Tap.** A `CATapDescription` with the app's bundle IDs (the app plus any helper processes seen playing its audio),
+   `muteBehavior = .mutedWhenTapped` (the app stops playing through its normal output while we read it),
+   `isProcessRestoreEnabled` (the tap re-attaches when the app relaunches), private to this process.
+2. **Aggregate device.** Private, with the destination as its main sub-device and the tap in its tap list with drift
+   compensation. The aggregate puts both on one clock and resamples the tap when rates differ (48 kHz app → 44.1 kHz
+   Bluetooth; measured in D5).
+3. **IOProc.** `RouteRenderer.render` copies the tap's stereo input to the destination's output channels, ramping gain
+   linearly from the last buffer's value to the current volume. Extra output channels get silence. No allocation,
+   locks or logging on this thread; volume and meters are atomics.
 
-The aggregate device puts the tap and the destination on one clock. Drift compensation handles
-small rate differences. **Open question for the spike:** does this also cover different sample rates
-(tap at 48 kHz, Bluetooth at 44.1 kHz)? If not, we add an `AudioConverter` step, still in the IOProc
-path but pre-allocated.
+Teardown (`TapAggregate.stop`) always runs in the order IOProc → aggregate → tap, including after a partial setup failure.
+If the app quits or crashes, the taps and aggregates die with it and every app plays normally again.
 
-Channel mapping: the tap is a stereo mixdown. If the destination has a different channel count,
-copy L/R into the first two output channels and zero the rest.
+## Which apps are listed
 
-## App ↔ audio process discovery
+Core Audio lists processes, not apps. `AudioApps` groups them: known owners first (`com.apple.WebKit.GPU` → Safari),
+then anything with `.helper` in its bundle ID belongs to the app named before it (`com.google.Chrome.helper` → Chrome).
+The island shows apps that are playing, plus any app with a saved preference; the rest sit under "Other apps".
 
-Core Audio lists processes, not apps (`kAudioHardwarePropertyProcessObjectList`). For each process object read
-`kAudioProcessPropertyBundleID`, `kAudioProcessPropertyPID` and `kAudioProcessPropertyIsRunningOutput`.
+## RouteManager
 
-Group helper processes under the app the user recognizes:
-
-1. Look up the bundle ID in a table of known helpers: `com.apple.WebKit.GPU` → Safari,
-   `com.google.Chrome.helper*` → Chrome, `com.microsoft.edgemac.helper*` → Edge,
-   `com.hnc.Discord.helper*` → Discord, and similar.
-2. Otherwise, strip `.helper…` suffixes and match a running `NSRunningApplication`.
-3. Otherwise, walk up the parent PID until we reach an app with a bundle.
-
-A route taps **all** process objects in the group. Browsers start new helper processes, so the
-`RouteManager` must rebuild a route when a group's process set changes.
-**Check in the spike:** macOS 26+ may let `CATapDescription` target bundle IDs directly. If that works,
-most of this re-tapping goes away.
-
-Note: `com.apple.WebKit.GPU` is shared by all WebKit apps (Safari, Mail, etc.). Routing "Safari" moves them all. That's acceptable for v1; say so in the UI.
-
-## RouteManager: reconciliation loop
-
-One `@MainActor` function, `reconcile()`, runs whenever any of these change: the process list,
-the device list, a user preference, or the Mac wakes from sleep.
+Works in the background without the UI. It reconciles whenever a preference changes, devices come or go, the default
+output changes, a device finishes settling, or the Mac wakes.
 
 ```
-for each (bundleID, pref) in store:
-    group    = running audio processes for bundleID
-    device   = output device with pref.deviceUID
-    desired  = (group non-empty && device present) ? (group.objectIDs, device.uid) : nil
-    current  = routes[bundleID]
-    if desired == current's config: continue
-    current?.stop()
-    routes[bundleID] = desired.map { Route.start(...) }   // on failure: log, mark error, leave nil
+devices  = OutputDevices.all()                         # once per reconcile
+settled  = devices connected for at least 1.5 s        # Bluetooth needs a moment after connecting
+for each preference:
+    target = chosen device if settled, else the default output
+for each live route:
+    same target and same tap bundle IDs → keep it (update volume)
+    otherwise → build the replacement first, then stop the old route (no gap on the wrong device)
 ```
 
-This single loop covers reconnecting Bluetooth, apps quitting and relaunching, and helper churn,
-with no special cases. When the device is missing the route is simply absent, and the app falls
-back to the system output on its own.
+A device disconnecting sends its apps to the default output at their own volume; they move back when it reconnects.
+A preference of "System default at 100%" is removed rather than routed. Other triggers:
 
-## Dynamic island UI
+- **Process list changed:** newly seen helper bundle IDs are added to routed apps' taps (browsers spawn helpers).
+- **coreaudiod restarted:** every route is rebuilt, since all object IDs are stale.
+- **Wake:** every route is rebuilt once devices have had the settle delay.
 
-**Menu-bar icon:** an SF Symbol (`hifispeaker.2`), filled when at least one route is active. Clicking it toggles the island.
+Volume changes during a slider drag go straight to the renderer's atomic; saving is batched.
 
-**Island panel:**
-- `NSPanel` with `styleMask: [.borderless, .nonactivatingPanel]`, `level = .statusBar`,
-  `collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]`, transparent background,
-  `hasShadow = true`.
-- Anchored to the top-center of the screen that has the menu bar. On notched Macs, the collapsed pill
-  matches the notch width (`NSScreen.auxiliaryTopLeftArea` / `auxiliaryTopRightArea`), so it grows out of the notch.
-- States: **collapsed** (notch-sized black pill, invisible) → **expanded** (about 360 × auto height,
-  rounded 24pt, black background, white text). SwiftUI `.spring(response: 0.35, dampingFraction: 0.8)` on the frame
-  and corner radius, with content fading in after the expansion begins.
-- Dismiss: click outside (global `NSEvent` monitor), Esc, or clicking the icon again.
+## Island UI
 
-**Expanded content:**
-```
-╭──────────────────────────────────────────╮
-│  🎵 Spotify        [🔵 JBL Flip 6    ▾]  │
-│     ━━━━━━━━━━━━━━━━━━━━━━●──────  72%    │
-│  🌐 Chrome         [System default   ▾]  │
-│  💬 Discord        [🎧 AirPods       ▾]  │
-│     ⚠ AirPods disconnected, using default │
-│ ──────────────────────────────────────── │
-│  Show all apps              Quit         │
-╰──────────────────────────────────────────╯
-```
-Rows show apps currently playing audio plus any app that has a saved rule. "System default" means no route.
-The volume slider only appears on routed apps (v1).
-
-v2 idea (not in v1): open the island by hovering over the notch, and show a slim "live activity"
-pill while a route is active.
+- `IslandController` owns the `IslandPanel` (level above the main menu, all Spaces, full-screen auxiliary). It opens on a
+  status-item click, the ⌃⌥⌘S shortcut, relaunching the app, or the pointer resting on the notch (polled at 10 Hz in the
+  default run-loop mode, so it pauses while menus track). Hover-opened islands close when the pointer leaves; others close
+  on an outside click or Esc.
+- `IslandView` is black, grows from the notch's size (from `NSScreen.auxiliaryTopLeftArea`/`auxiliaryTopRightArea`) with
+  a spring, and has three pages: apps, settings, welcome.
+- `IslandModel` refreshes from Core Audio every 0.5 s while open, publishing only values that changed. Where an app is
+  "actually playing" comes from `RouteManager.currentDestination`, not recomputed in the UI.
 
 ## Threads
 
-- Main actor: UI, `RouteManager`, `RouteStore`, all create/destroy calls.
-- Core Audio listener callbacks (`AudioObjectAddPropertyListenerBlock`): register them on the main queue.
-- IOProc: Core Audio's real-time thread. It touches only the buffers and atomics captured when the route was created.
+- Main actor: UI, `RouteManager`, all route creation and teardown, hardware notifications.
+- The permission probe runs off the main thread, because tap creation blocks until the user answers the prompt.
+- IOProcs: Core Audio's real-time thread; they touch only buffers and atomics.

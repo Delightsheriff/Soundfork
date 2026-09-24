@@ -2,8 +2,12 @@ import AppKit
 
 /// The menu-bar icon: the app icon's fork in miniature, as a template image so it follows the menu bar's
 /// appearance. When routes are active, sound waves ring off the tines.
+@MainActor
 enum StatusGlyph {
-    static func image(active: Bool) -> NSImage {
+    static let idle = draw(active: false)
+    static let active = draw(active: true)
+
+    private static func draw(active: Bool) -> NSImage {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { _ in
             NSColor.black.set()
 

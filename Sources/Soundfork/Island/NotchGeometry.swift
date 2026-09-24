@@ -5,16 +5,13 @@ struct NotchGeometry {
     let screen: NSScreen
     /// Size of the collapsed island (matches the physical notch on notched displays).
     let size: CGSize
-    let hasNotch: Bool
 
     init(screen: NSScreen) {
         self.screen = screen
         if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea, screen.safeAreaInsets.top > 0 {
             size = CGSize(width: screen.frame.width - left.width - right.width, height: screen.safeAreaInsets.top)
-            hasNotch = true
         } else {
             size = CGSize(width: 190, height: max(NSStatusBar.system.thickness, 24))
-            hasNotch = false
         }
     }
 

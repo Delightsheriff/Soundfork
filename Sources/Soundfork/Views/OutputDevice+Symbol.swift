@@ -1,5 +1,11 @@
 import SoundforkCore
 
+/// Symbols for route states that aren't a specific device.
+enum DeviceSymbol {
+    static let systemDefault = "arrow.triangle.branch"
+    static let missing = "speaker.slash"
+}
+
 extension OutputDevice {
     var symbolName: String {
         let lowered = name.lowercased()

@@ -21,8 +21,6 @@ final class GlobalHotKey {
         self.action = action
     }
 
-    var isRegistered: Bool { hotKeyRef != nil }
-
     /// Returns false if the combination is taken.
     @discardableResult
     func register() -> Bool {

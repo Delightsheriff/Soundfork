@@ -8,10 +8,7 @@ public struct RouteStore {
     public init(defaults: UserDefaults = .standard) { self.defaults = defaults }
 
     public func load() -> [String: RoutePreference] {
-        // Routes saved before the rename to Soundfork live under the old bundle ID.
-        guard let data = defaults.data(forKey: key) ?? UserDefaults(suiteName: "dev.local.AudioRouter")?.data(forKey: key) else {
-            return [:]
-        }
+        guard let data = defaults.data(forKey: key) else { return [:] }
         return (try? JSONDecoder().decode([String: RoutePreference].self, from: data)) ?? [:]
     }
 

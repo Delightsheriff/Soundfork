@@ -12,7 +12,7 @@ struct DevicePicker: View {
     var body: some View {
         VStack(spacing: 3) {
             if let defaultOption {
-                Option(symbol: "arrow.triangle.branch", title: defaultOption.title, detail: defaultOption.detail,
+                Option(symbol: DeviceSymbol.systemDefault, title: defaultOption.title, detail: defaultOption.detail,
                        isSelected: selectedUID == nil) { onSelect(nil) }
             }
             ForEach(devices) { device in

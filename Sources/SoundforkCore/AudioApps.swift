@@ -28,7 +28,7 @@ public enum AudioApps {
         .sorted { $0.bundleID < $1.bundleID }
     }
 
-    public static func current(excludingPrefix excluded: String = "com.delightsheriff.Soundfork") throws -> [AudioApp] {
+    public static func current(excludingPrefix excluded: String = AppIdentity.bundleID) throws -> [AudioApp] {
         group(try AudioProcesses.all(), excludingPrefix: excluded)
     }
 }

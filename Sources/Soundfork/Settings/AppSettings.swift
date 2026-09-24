@@ -22,11 +22,19 @@ final class AppSettings {
 
     static let shortcutDisplay = "⌃⌥⌘S"
 
-    var openOnHover: Bool { didSet { save(openOnHover, "openOnNotchHover"); keepReachable() } }
-    var hoverSpeed: HoverSpeed { didSet { save(hoverSpeed.rawValue, "hoverSpeed") } }
-    var shortcutEnabled: Bool { didSet { save(shortcutEnabled, "shortcutEnabled"); keepReachable() } }
-    var showMenuBarIcon: Bool { didSet { save(showMenuBarIcon, "showMenuBarIcon"); keepReachable() } }
-    var hasCompletedWelcome: Bool { didSet { save(hasCompletedWelcome, "hasCompletedWelcome") } }
+    private enum Key {
+        static let openOnHover = "openOnNotchHover"
+        static let hoverSpeed = "hoverSpeed"
+        static let shortcutEnabled = "shortcutEnabled"
+        static let showMenuBarIcon = "showMenuBarIcon"
+        static let hasCompletedWelcome = "hasCompletedWelcome"
+    }
+
+    var openOnHover: Bool { didSet { save(openOnHover, Key.openOnHover); keepReachable() } }
+    var hoverSpeed: HoverSpeed { didSet { save(hoverSpeed.rawValue, Key.hoverSpeed) } }
+    var shortcutEnabled: Bool { didSet { save(shortcutEnabled, Key.shortcutEnabled); keepReachable() } }
+    var showMenuBarIcon: Bool { didSet { save(showMenuBarIcon, Key.showMenuBarIcon); keepReachable() } }
+    var hasCompletedWelcome: Bool { didSet { save(hasCompletedWelcome, Key.hasCompletedWelcome) } }
     /// Set by the hot-key registration when another app already owns the combination.
     var shortcutUnavailable = false
 
@@ -38,17 +46,17 @@ final class AppSettings {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         defaults.register(defaults: [
-            "openOnNotchHover": true,
-            "hoverSpeed": HoverSpeed.normal.rawValue,
-            "shortcutEnabled": true,
-            "showMenuBarIcon": true,
-            "hasCompletedWelcome": false,
+            Key.openOnHover: true,
+            Key.hoverSpeed: HoverSpeed.normal.rawValue,
+            Key.shortcutEnabled: true,
+            Key.showMenuBarIcon: true,
+            Key.hasCompletedWelcome: false,
         ])
-        openOnHover = defaults.bool(forKey: "openOnNotchHover")
-        hoverSpeed = HoverSpeed(rawValue: defaults.string(forKey: "hoverSpeed") ?? "") ?? .normal
-        shortcutEnabled = defaults.bool(forKey: "shortcutEnabled")
-        showMenuBarIcon = defaults.bool(forKey: "showMenuBarIcon")
-        hasCompletedWelcome = defaults.bool(forKey: "hasCompletedWelcome")
+        openOnHover = defaults.bool(forKey: Key.openOnHover)
+        hoverSpeed = HoverSpeed(rawValue: defaults.string(forKey: Key.hoverSpeed) ?? "") ?? .normal
+        shortcutEnabled = defaults.bool(forKey: Key.shortcutEnabled)
+        showMenuBarIcon = defaults.bool(forKey: Key.showMenuBarIcon)
+        hasCompletedWelcome = defaults.bool(forKey: Key.hasCompletedWelcome)
     }
 
     // MARK: Open at login
@@ -60,9 +68,9 @@ final class AppSettings {
         do {
             if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
         } catch {
-            // Status below reflects what actually happened.
+            // The refreshed status reflects what actually happened.
         }
-        loginItemStatus = SMAppService.mainApp.status
+        refreshLoginItemStatus()
     }
 
     func refreshLoginItemStatus() {

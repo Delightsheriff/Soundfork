@@ -23,6 +23,9 @@ public struct RoutePreference: Codable, Sendable, Hashable {
         volume = try container.decodeIfPresent(Float.self, forKey: .volume) ?? 1
     }
 
+    /// Volumes at or above this count as 100% (sliders rarely land on exactly 1).
+    public static let fullVolume: Float = 0.995
+
     /// Nothing to do for this app: default device, full volume. No route needed.
-    var isNeutral: Bool { deviceUID == nil && volume >= 0.995 }
+    var isNeutral: Bool { deviceUID == nil && volume >= Self.fullVolume }
 }

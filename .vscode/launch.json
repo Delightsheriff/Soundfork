@@ -1,0 +1,44 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:AudioRouter}",
+            "name": "Debug TapSpike",
+            "target": "TapSpike",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug TapSpike"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:AudioRouter}",
+            "name": "Release TapSpike",
+            "target": "TapSpike",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release TapSpike"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:AudioRouter}",
+            "name": "Debug Soundfork",
+            "target": "Soundfork",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug Soundfork"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:AudioRouter}",
+            "name": "Release Soundfork",
+            "target": "Soundfork",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release Soundfork"
+        }
+    ]
+}

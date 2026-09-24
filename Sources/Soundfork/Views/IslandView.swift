@@ -75,7 +75,7 @@ struct IslandView: View {
                 Spacer()
                 DeviceChip(
                     title: model.defaultDevice?.name ?? "No output",
-                    symbol: model.defaultDevice?.symbolName ?? "speaker.slash",
+                    symbol: model.defaultDevice?.symbolName ?? DeviceSymbol.missing,
                     highlighted: true,
                     isExpanded: model.expandedPicker == IslandModel.outputPickerID,
                     onTap: { withAnimation(Self.pickerSpring) { model.togglePicker(IslandModel.outputPickerID) } }
