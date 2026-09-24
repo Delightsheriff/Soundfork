@@ -8,7 +8,9 @@ final class TapAggregate {
     private(set) var aggregateID = AudioObjectID(kAudioObjectUnknown)
     private var ioProcID: AudioDeviceIOProcID?
 
-    init(tap description: CATapDescription, outputUID: String, name: String,
+    /// `destinationInputStreams`: how many input streams the output device itself has (a headset's microphone).
+    /// They come before the tap in the aggregate's inputs and are switched off for our IOProc.
+    init(tap description: CATapDescription, outputUID: String, name: String, destinationInputStreams: Int = 0,
          ioProc: AudioDeviceIOProc, clientData: UnsafeMutableRawPointer?) throws {
         description.isPrivate = true
         do {
@@ -28,6 +30,7 @@ final class TapAggregate {
             ]
             try check(AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID), "AudioHardwareCreateAggregateDevice")
             try check(AudioDeviceCreateIOProcID(aggregateID, ioProc, clientData, &ioProcID), "AudioDeviceCreateIOProcID")
+            if destinationInputStreams > 0, let ioProcID { useOnlyTapInput(for: ioProcID, skipping: destinationInputStreams) }
             try check(AudioDeviceStart(aggregateID, ioProcID), "AudioDeviceStart")
         } catch {
             stop()
@@ -36,6 +39,28 @@ final class TapAggregate {
     }
 
     deinit { stop() }
+
+    /// Tells Core Audio our IOProc reads only the tap, not the output device's own microphone. Opening a
+    /// headset's mic switches Bluetooth headsets (AirPods etc.) into low-quality call mode for everything.
+    /// Best effort: if it fails the route still works, so the error is not fatal.
+    private func useOnlyTapInput(for ioProcID: AudioDeviceIOProcID, skipping skipped: Int) {
+        guard let streams = try? aggregateID.readArray(kAudioDevicePropertyStreams, scope: kAudioObjectPropertyScopeInput,
+                                                        of: AudioObjectID.self).count, streams > skipped else { return }
+        typealias Usage = AudioHardwareIOProcStreamUsage
+        let flagsOffset = MemoryLayout<Usage>.offset(of: \Usage.mStreamIsOn)!
+        let size = flagsOffset + streams * MemoryLayout<UInt32>.stride
+        let usage = UnsafeMutableRawPointer.allocate(byteCount: size, alignment: MemoryLayout<Usage>.alignment)
+        defer { usage.deallocate() }
+        usage.storeBytes(of: unsafeBitCast(ioProcID, to: UnsafeMutableRawPointer.self),
+                         toByteOffset: MemoryLayout<Usage>.offset(of: \Usage.mIOProc)!, as: UnsafeMutableRawPointer.self)
+        usage.storeBytes(of: UInt32(streams), toByteOffset: MemoryLayout<Usage>.offset(of: \Usage.mNumberStreams)!, as: UInt32.self)
+        for stream in 0..<streams {
+            usage.storeBytes(of: UInt32(stream >= skipped ? 1 : 0), toByteOffset: flagsOffset + stream * MemoryLayout<UInt32>.stride, as: UInt32.self)
+        }
+        var address = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyIOProcStreamUsage,
+                                                 mScope: kAudioObjectPropertyScopeInput, mElement: kAudioObjectPropertyElementMain)
+        _ = AudioObjectSetPropertyData(aggregateID, &address, 0, nil, UInt32(size), usage)
+    }
 
     /// Idempotent. Returns any failures; they can't be recovered from, only reported.
     @discardableResult

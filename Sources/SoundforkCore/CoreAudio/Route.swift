@@ -47,6 +47,7 @@ public final class Route {
         description.name = "Soundfork tap"
         description.muteBehavior = .mutedWhenTapped
         tapAggregate = try TapAggregate(tap: description, outputUID: destination.uid, name: "Soundfork route",
+                                        destinationInputStreams: skippedInputBuffers,
                                         ioProc: routeIOProc, clientData: Unmanaged.passUnretained(renderer).toOpaque())
     }
 
