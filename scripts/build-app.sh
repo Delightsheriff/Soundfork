@@ -2,6 +2,7 @@
 # Builds signed .app bundles into build/.
 #   ./scripts/build-app.sh            → build/Soundfork.app
 #   ./scripts/build-app.sh TapSpike   → build/TapSpike.app
+#   UNIVERSAL=1 ./scripts/build-app.sh → Apple Silicon + Intel in one binary
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -25,8 +26,10 @@ if [[ -z "${SIGN_IDENTITY:-}" ]]; then
   fi
 fi
 
-swift build -c release --product "$PRODUCT"
-BIN="$(swift build -c release --show-bin-path)/$PRODUCT"
+BUILD_FLAGS=(-c release)
+if [[ "${UNIVERSAL:-0}" == 1 ]]; then BUILD_FLAGS+=(--arch arm64 --arch x86_64); fi
+swift build "${BUILD_FLAGS[@]}" --product "$PRODUCT"
+BIN="$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)/$PRODUCT"
 
 APP="build/$NAME.app"
 rm -rf "$APP"
