@@ -1,17 +1,19 @@
 import CoreAudio
 
 public enum OutputDevices {
-    /// Visible devices that can play audio, excluding aggregate devices (including our own route devices).
+    /// Visible devices that can play audio. The user's own aggregate and Multi-Output devices are included;
+    /// Soundfork's private route devices are not.
     public static func all() throws -> [OutputDevice] {
         try AudioObjectID.system.readArray(kAudioHardwarePropertyDevices, of: AudioObjectID.self).compactMap { id in
             let outputs = try id.channelCount(scope: kAudioObjectPropertyScopeOutput)
             guard outputs.channels > 0 else { return nil }
+            let uid = try id.readString(kAudioDevicePropertyDeviceUID)
+            guard !uid.hasPrefix(AppIdentity.bundleID) else { return nil }
             let transport = try id.read(kAudioDevicePropertyTransportType, initial: UInt32(0))
-            guard transport != kAudioDeviceTransportTypeAggregate else { return nil }
             if id.hasProperty(kAudioDevicePropertyIsHidden),
                try id.read(kAudioDevicePropertyIsHidden, initial: UInt32(0)) != 0 { return nil }
             return OutputDevice(
-                uid: try id.readString(kAudioDevicePropertyDeviceUID),
+                uid: uid,
                 objectID: id,
                 name: try id.readString(kAudioObjectPropertyName),
                 kind: kind(for: transport),
@@ -39,7 +41,7 @@ public enum OutputDevices {
         case kAudioDeviceTransportTypeUSB: .usb
         case kAudioDeviceTransportTypeHDMI, kAudioDeviceTransportTypeDisplayPort: .hdmi
         case kAudioDeviceTransportTypeAirPlay: .airPlay
-        case kAudioDeviceTransportTypeVirtual: .virtual
+        case kAudioDeviceTransportTypeVirtual, kAudioDeviceTransportTypeAggregate: .virtual
         default: .other
         }
     }

@@ -14,20 +14,16 @@ public final class RouteManager {
     private var routes: [String: Route] = [:]
     private let store: RouteStore
     private var hardwareObserver: HardwareObserver?
-    /// When each device UID was first seen. Newly connected devices (Bluetooth especially) get a moment
-    /// to settle before routes move onto them.
-    private var firstSeen: [String: Date] = [:]
+    private var settling: DeviceSettling
     private var settleWork: DispatchWorkItem?
     private var saveWork: DispatchWorkItem?
     private var reconcileScheduled = false
-    private static let settleDelay: TimeInterval = 1.5
     private let log = Logger(subsystem: AppIdentity.bundleID, category: "routes")
 
     public init(store: RouteStore = RouteStore()) {
         self.store = store
         preferences = store.load()
-        // Devices present at launch count as settled.
-        for device in (try? OutputDevices.all()) ?? [] { firstSeen[device.uid] = .distantPast }
+        settling = DeviceSettling(alreadyPresent: ((try? OutputDevices.all()) ?? []).map(\.uid))
         hardwareObserver = try? HardwareObserver { [weak self] change in
             switch change {
             case .devices: self?.scheduleReconcile()
@@ -96,50 +92,44 @@ public final class RouteManager {
 
     /// After sleep, Bluetooth devices often reconnect late: rebuild once they've had time to settle.
     public func handleWake() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDelay) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + DeviceSettling.delay) { [weak self] in
             MainActor.assumeIsolated { self?.rebuildAll(reason: "woke from sleep") }
         }
     }
 
     public func reconcile() {
         let devices = (try? OutputDevices.all()) ?? []
-        let settled = settledDevices(present: devices)
-        let defaultDevice = try? OutputDevices.defaultOutput(in: devices)
+        let byUID = Dictionary(devices.map { ($0.uid, $0) }, uniquingKeysWith: { first, _ in first })
+        let (settled, nextCheck) = settling.update(present: Set(byUID.keys), now: .now)
+        if let nextCheck { scheduleSettleCheck(in: nextCheck) }
 
-        // Where each preference should play right now: its chosen device, or the default if that's missing.
-        var targets: [String: OutputDevice] = [:]
-        for (bundleID, preference) in preferences {
-            if let chosen = preference.deviceUID, settled.contains(chosen), let device = devices.first(where: { $0.uid == chosen }) {
-                targets[bundleID] = device
-            } else if let defaultDevice {
-                targets[bundleID] = defaultDevice
-            }
+        let plan = RoutePlan.make(
+            preferences: preferences,
+            settled: settled,
+            defaultUID: (try? OutputDevices.defaultOutput(in: devices))?.uid,
+            live: routes.mapValues { RoutePlan.Live(destinationUID: $0.destinationUID, tapBundleIDs: $0.tapBundleIDs) }
+        )
+
+        for bundleID in plan.keep {
+            routes[bundleID]?.renderer.volume = preferences[bundleID]?.gain ?? 1
         }
+        // Stopped only after their replacements run, so an app never briefly plays on the wrong device.
+        let replaced = plan.stop.compactMap { bundleID in routes.removeValue(forKey: bundleID).map { (bundleID, $0) } }
 
-        var replaced: [(String, Route)] = []
-        for (bundleID, route) in routes {
-            let stillWanted = targets[bundleID]?.uid == route.destinationUID
-                && route.source == .bundleIDs(preferences[bundleID]?.tapBundleIDs ?? [])
-            if stillWanted {
-                route.renderer.volume = preferences[bundleID]?.gain ?? 1
-            } else {
-                replaced.append((bundleID, route))
-                routes[bundleID] = nil
-            }
-        }
-
-        for (bundleID, target) in targets where routes[bundleID] == nil {
-            guard let preference = preferences[bundleID] else { continue }
+        for (bundleID, uid) in plan.start {
+            guard let preference = preferences[bundleID], let device = byUID[uid] else { continue }
             do {
-                routes[bundleID] = try Route(source: .bundleIDs(preference.tapBundleIDs), destination: target, volume: preference.gain)
+                routes[bundleID] = try Route(source: .bundleIDs(preference.tapBundleIDs), destination: device, volume: preference.gain)
                 errors[bundleID] = nil
-                log.notice("route started \(bundleID, privacy: .public) → \(target.uid, privacy: .public) volume=\(preference.volume) taps=\(preference.tapBundleIDs, privacy: .public)")
+                log.notice("route started \(bundleID, privacy: .public) → \(uid, privacy: .private(mask: .hash)) taps=\(preference.tapBundleIDs, privacy: .public)")
             } catch {
                 errors[bundleID] = "\(error)"
                 log.error("route failed \(bundleID, privacy: .public): \(String(describing: error), privacy: .public)")
             }
         }
-        // Stop old routes only after their replacements run, so the app never briefly plays on the wrong device.
+        for bundleID in plan.unroutable {
+            errors[bundleID] = "No output device is available."
+        }
         for (bundleID, route) in replaced { stop(route, bundleID) }
         errors = errors.filter { preferences[$0.key] != nil }
         onChange?()
@@ -178,21 +168,11 @@ public final class RouteManager {
         }
     }
 
-    /// UIDs of devices that have been connected for `settleDelay`; schedules a re-check for the rest.
-    private func settledDevices(present devices: [OutputDevice]) -> Set<String> {
-        let now = Date.now
-        let present = Set(devices.map(\.uid))
-        firstSeen = firstSeen.filter { present.contains($0.key) }
-        for uid in present where firstSeen[uid] == nil { firstSeen[uid] = now }
-
-        let pending = firstSeen.values.map { Self.settleDelay - now.timeIntervalSince($0) }.filter { $0 > 0 }
-        if let wait = pending.min() {
-            settleWork?.cancel()
-            let work = DispatchWorkItem { [weak self] in MainActor.assumeIsolated { self?.reconcile() } }
-            settleWork = work
-            DispatchQueue.main.asyncAfter(deadline: .now() + wait + 0.05, execute: work)
-        }
-        return Set(firstSeen.filter { now.timeIntervalSince($0.value) >= Self.settleDelay }.keys)
+    private func scheduleSettleCheck(in wait: TimeInterval) {
+        settleWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in MainActor.assumeIsolated { self?.reconcile() } }
+        settleWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + wait + 0.05, execute: work)
     }
 
     private func preference(for app: AudioApp) -> RoutePreference {

@@ -21,6 +21,10 @@ public final class Route {
 
     public let source: Source
     public let destinationUID: String
+    /// The bundle IDs this route taps (empty for process-object taps).
+    var tapBundleIDs: [String] {
+        if case .bundleIDs(let ids) = source { ids } else { [] }
+    }
     public let renderer: RouteRenderer
     private let skippedInputBuffers: Int
     private var tapAggregate: TapAggregate?
