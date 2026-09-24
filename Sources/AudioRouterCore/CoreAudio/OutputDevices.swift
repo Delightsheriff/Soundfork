@@ -1,0 +1,48 @@
+import CoreAudio
+
+public enum OutputDevices {
+    /// Visible devices that can play audio, excluding aggregate devices (including our own route devices).
+    public static func all() throws -> [OutputDevice] {
+        try AudioObjectID.system.readArray(kAudioHardwarePropertyDevices, of: AudioObjectID.self).compactMap { id in
+            let outputs = try id.channelCount(scope: kAudioObjectPropertyScopeOutput)
+            guard outputs.channels > 0 else { return nil }
+            let transport = try id.read(kAudioDevicePropertyTransportType, initial: UInt32(0))
+            guard transport != kAudioDeviceTransportTypeAggregate else { return nil }
+            if id.hasProperty(kAudioDevicePropertyIsHidden),
+               try id.read(kAudioDevicePropertyIsHidden, initial: UInt32(0)) != 0 { return nil }
+            return OutputDevice(
+                uid: try id.readString(kAudioDevicePropertyDeviceUID),
+                objectID: id,
+                name: try id.readString(kAudioObjectPropertyName),
+                kind: kind(for: transport),
+                channels: outputs.channels,
+                sampleRate: try id.read(kAudioDevicePropertyNominalSampleRate, initial: Float64(0))
+            )
+        }
+    }
+
+    public static func defaultOutput() throws -> OutputDevice? {
+        let id = try AudioObjectID.system.read(kAudioHardwarePropertyDefaultOutputDevice, initial: AudioObjectID(kAudioObjectUnknown))
+        return try all().first { $0.objectID == id }
+    }
+
+    /// Changes the Mac's default output, same as picking it in Control Center.
+    public static func setDefault(_ device: OutputDevice) throws {
+        var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+                                                 mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        var id = device.objectID
+        try check(AudioObjectSetPropertyData(.system, &address, 0, nil, UInt32(MemoryLayout<AudioObjectID>.size), &id), "set default output")
+    }
+
+    static func kind(for transport: UInt32) -> OutputDevice.Kind {
+        switch transport {
+        case kAudioDeviceTransportTypeBuiltIn: .builtIn
+        case kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE: .bluetooth
+        case kAudioDeviceTransportTypeUSB: .usb
+        case kAudioDeviceTransportTypeHDMI, kAudioDeviceTransportTypeDisplayPort: .hdmi
+        case kAudioDeviceTransportTypeAirPlay: .airPlay
+        case kAudioDeviceTransportTypeVirtual: .virtual
+        default: .other
+        }
+    }
+}
