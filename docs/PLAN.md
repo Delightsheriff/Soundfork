@@ -20,7 +20,6 @@
 1. **macOS 14.4+ support.** Tapping by bundle ID needs macOS 26; older systems need process-object taps,
    re-created when an app relaunches or spawns helpers (`Route.Source.processes` already exists). Start with
    a design spike: TapSpike on a macOS 14/15 machine, and an audit of newer SwiftUI/AppKit APIs.
-2. **Verify headsets:** route to AirPods and confirm they stay in high-quality mode (TESTS.md #14).
 
 ## Maybe later
 

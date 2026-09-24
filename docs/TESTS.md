@@ -35,7 +35,7 @@ Watch the logs: `log stream --level info --predicate 'subsystem == "com.delights
 | 11 | After 10 | Chrome's chip → System default | Chrome back on the speaker |
 | 12 | Mac output = MacBook Pro Speakers | Spotify → Bluetooth speaker, listen 30 min | Spotify only on the speaker, correct pitch, no clicks or drift |
 | 13 | Chrome routed | Quit and reopen Chrome, play something | Still routed |
-| 14 | An app routed to a headset with a microphone (AirPods) | Play audio | Stays high quality (not "call" quality); the headset's mic indicator doesn't turn on |
+| 14 | An app routed to a headset with a microphone (AirPods, earbuds) | Play audio | Stays high quality (not "call" quality); the headset's mic indicator doesn't turn on. ✅ Passed with Bluetooth earbuds, 2026-09-24 |
 
 ## Volume and mute
 

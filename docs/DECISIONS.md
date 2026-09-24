@@ -70,3 +70,9 @@ Soundfork is distributed publicly (GitHub, MIT), so D4's "personal tool" framing
 connected long enough) are pure and unit-tested. `RouteManager.reconcile()` only carries the plan out, always starting
 replacements before stopping old routes. Tap creation waits for an off-main permission check, because it blocks until
 the user answers the audio-capture prompt.
+
+## D11: Soundfork never changes the Mac's output on its own
+Apps pinned to a device stay there when new headphones connect; apps on "System default" follow whatever macOS
+picks. Automatically switching the Mac's output to newly connected headphones was considered and declined
+(2026-09-24): that choice stays with macOS and the user. Headsets verified: routing to Bluetooth earbuds keeps
+them in high-quality mode (TESTS.md #14).

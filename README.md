@@ -102,7 +102,7 @@ More detail is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - **Safari and other WebKit apps share one audio process**, so routing Safari also moves Mail's and other WebKit apps' sounds.
 - **Per-tab routing** in browsers isn't possible; a browser moves as a whole.
 - Apps that take **exclusive ("hog mode") control** of a device can't be redirected.
-- Routing to a **headset with a microphone** (AirPods) asks Core Audio to leave the mic off so the headset stays in high-quality mode; this hasn't been verified on every headset yet.
+- Routing to a **headset with a microphone** (AirPods, earbuds) keeps the mic off so the headset stays in high-quality mode. Tested with Bluetooth earbuds; other headsets may behave differently.
 
 ## Privacy
 
