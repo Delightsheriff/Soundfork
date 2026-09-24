@@ -11,7 +11,7 @@
 | Audio | Core Audio HAL C API (`AudioHardwareCreateProcessTap`, `CATapDescription`, `AudioHardwareCreateAggregateDevice`, `AudioDeviceCreateIOProcIDWithBlock`) | The only public, driver-free way to capture and redirect a single app's audio |
 | Real-time shared state | `Synchronization.Atomic` (stdlib) | Lock-free volume/mute/counters readable from the IOProc |
 | Persistence | `UserDefaults` (one Codable blob) | Tiny data: `[bundleID: RoutePreference]` |
-| Build | SwiftPM package + `scripts/build-app.sh` | No `.xcodeproj` for agents to corrupt; builds from the CLI |
+| Build | SwiftPM package + `scripts/build-app.sh` | Plain-text project with no `.xcodeproj`; builds entirely from the command line |
 | Signing | "Apple Development" identity already in the keychain | Stable signature so the audio-capture permission persists between builds |
 | Deployment target | macOS 26 | Personal tool on a macOS 27 machine; lets us use the newest tap APIs |
 | Sandbox | Off | Not shipping to the App Store; avoids sandbox restrictions on taps and aggregate devices |

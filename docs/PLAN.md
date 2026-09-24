@@ -1,70 +1,33 @@
-# Plan
+# Roadmap
 
-**Status (2026-09-24):** v1.0.0 feature-complete: routing, per-app volume, island UI, settings, shortcut, login item, welcome, icon, hardening. Next: macOS 14.4 support and a GitHub release.
+## Done (v1.0.0)
 
-## How we work
+- **Routing engine:** Core Audio process tap → private aggregate device → real-time IOProc, one per routed app.
+  Proven with `TapSpike` before any UI was built (results in [DECISIONS.md](DECISIONS.md), D5).
+- **App discovery:** helper processes grouped under their app; any app playing audio shows up.
+- **Per-app output and volume,** persisted by bundle ID and device UID. Volume ramps smoothly,
+  and switching devices starts the new route before stopping the old one.
+- **Lifecycle:** device disconnect falls back to the default output; reconnect restores the route after a
+  1.5 s settle; routes rebuild after wake and after coreaudiod restarts.
+- **Island UI:** opens from the notch (hover), the ⌃⌥⌘S shortcut or the menu-bar icon; inline device
+  pickers; Output section with device switching and main volume.
+- **App shell:** one-time welcome, in-island settings, open at login, hideable menu-bar icon, app icon,
+  install script.
 
-Prompt files in `prompts/` are optional handoff notes now; the listen-and-review loop stays the same.
+## Next
 
-Three roles:
+1. **macOS 14.4+ support.** Tapping by bundle ID needs macOS 26; older systems need process-object
+   taps, re-created when an app relaunches.
+2. **Release packaging.** `scripts/release.sh` builds a release `.app`, signs it and produces
+   `Soundfork.zip` for GitHub Releases.
+3. **Universal binary** (Apple Silicon + Intel).
 
-| Who | Does |
-|---|---|
-| **You (human)** | Listen. Report what you hear, check permission prompts, plug in and unplug devices. Nobody else can verify audio. |
-| **Builder agents (Fable, etc.)** | Carry out one prompt file at a time, in a fresh session opened in this folder. They stop at the acceptance criteria and report back. |
+## Maybe later
 
-The loop for each phase:
-```
-Lead writes prompts/NN-*.md
-   → you open a builder session here and paste: "Do prompts/NN-*.md"
-   → builder implements and reports
-   → you run it and say what you hear
-   → Lead reviews the code and your report → fix / re-prompt / mark done → next phase
-```
+- Developer ID signing and notarization, so downloads open without the "Open Anyway" step.
+- Output level meters on routed apps.
+- Routing one app to several devices at once.
 
-Phase 1 (the audio spike) is the riskiest step and needs short debug loops, so the Lead does it directly
-instead of handing it off. After that, UI and discovery can run in parallel builder sessions,
-because they touch separate folders.
+## Out of scope
 
-## Phases
-
-### Phase 0: Scaffold (Lead)
-- `Package.swift` with the `SoundforkCore`, `Soundfork` and `TapSpike` targets
-- `Resources/Info.plist` and `scripts/build-app.sh` (build → .app → codesign)
-- **Done when** `./scripts/build-app.sh` produces a signed app that launches and shows a menu-bar icon.
-
-### Phase 1: Tap spike (Lead) · go/no-go
-- `TapSpike`: hard-coded Spotify → the Bluetooth speaker, using `Route.swift` as specified in ARCHITECTURE.md.
-- Log the tap format, destination format, and IOProc calls per second.
-- Answer the open questions: different sample rates (48k tap → 44.1k Bluetooth)? `CATapDescription` by bundle ID on macOS 26+?
-- **Done when** Spotify plays only on the speaker while YouTube plays on the Mac speakers,
-  for 30 minutes with no clicks, drift or growing latency. Stopping the spike returns Spotify to normal output,
-  and no leftover aggregate device appears in Audio MIDI Setup.
-- **If it fails:** stop, write up findings in `docs/DECISIONS.md`, and rethink before building anything else.
-
-### Phase 2: Core engine (builder)
-- Extract `Route`, `OutputDevices` and `AudioProcesses` from the spike into `SoundforkCore`.
-- Run several routes at once (Spotify → speaker, Chrome → Mac, Discord → AirPods).
-- **Done when** three routes play simultaneously and start/stop in any order without glitches or leaks.
-
-### Phase 3: Discovery and grouping (builder) · can run parallel to Phase 4
-- Group helper processes into `AudioApp`s (see ARCHITECTURE.md → discovery). Add unit tests for the grouping table and fallback logic.
-- **Done when** Safari, Chrome, Spotify, Discord and Music each show up as one app while playing, and the list updates live.
-
-### Phase 4: Island UI (builder) · can run parallel to Phase 3, against mock data
-- Status item, `IslandPanel`, and SwiftUI views driven by a protocol plus a mock data source.
-- **Done when** the island expands and collapses smoothly from the top-center (and the notch, if present), dismisses correctly, and works across Spaces and full-screen apps.
-
-### Phase 5: Wire up and persist (Lead or builder)
-- `RouteManager.reconcile()`, `RouteStore`, connecting the UI to the real engine.
-- **Done when** choosing a device routes the app instantly, choosing "System default" un-routes it, and routes come back after the app relaunches.
-
-### Phase 6: Lifecycle hardening (builder + you testing)
-- Bluetooth disconnect and reconnect, app quit and relaunch, browser helper churn, sleep/wake, default device changes.
-- **Done when** the manual test checklist (to be written in `docs/TESTS.md`) passes.
-
-### Phase 7: Polish (optional)
-Per-app volume and mute UI, launch at login (`SMAppService`), device icons by transport type, error states in rows.
-
-## Out of scope for v1
-EQ and effects, recording, notch-hover activation, App Store distribution, per-tab browser routing.
+EQ and effects, recording, per-tab browser routing, App Store distribution.

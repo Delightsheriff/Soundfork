@@ -8,7 +8,7 @@ An aggregate device with the destination as its main sub-device gives us an IOPr
 the tapped audio as input and the destination as output. That's enough for per-app routing with no driver.
 
 ## D2: SwiftPM + build script instead of an Xcode project
-`.pbxproj` files are hard for agents to edit safely. SwiftPM plus a script that assembles and signs
+`.pbxproj` files are hard to review and merge. SwiftPM plus a script that assembles and signs
 the `.app` builds entirely from the CLI.
 
 ## D3: AppKit NSPanel for the island, not MenuBarExtra
